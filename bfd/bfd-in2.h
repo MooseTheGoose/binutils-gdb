@@ -1476,7 +1476,8 @@ enum bfd_architecture
 #define bfd_mach_mcf_isa_c_nodiv_mac   30
 #define bfd_mach_mcf_isa_c_nodiv_emac  31
   bfd_arch_vax,       /* DEC Vax.  */
-
+  bfd_arch_mos65xx,   /* MOS65XX Family */
+#define bfd_mach_6502                  1
   bfd_arch_or1k,      /* OpenRISC 1000.  */
 #define bfd_mach_or1k          1
 #define bfd_mach_or1knd        2

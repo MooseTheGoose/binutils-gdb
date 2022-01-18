@@ -102,7 +102,8 @@ DESCRIPTION
 .#define bfd_mach_mcf_isa_c_nodiv_mac	30
 .#define bfd_mach_mcf_isa_c_nodiv_emac	31
 .  bfd_arch_vax,       {* DEC Vax.  *}
-.
+.  bfd_arch_mos65xx,   {* MOS65XX Family *}
+.#define bfd_mach_6502 			1
 .  bfd_arch_or1k,      {* OpenRISC 1000.  *}
 .#define bfd_mach_or1k		1
 .#define bfd_mach_or1knd	2
@@ -657,6 +658,7 @@ extern const bfd_arch_info_type bfd_mmix_arch;
 extern const bfd_arch_info_type bfd_mn10200_arch;
 extern const bfd_arch_info_type bfd_mn10300_arch;
 extern const bfd_arch_info_type bfd_moxie_arch;
+extern const bfd_arch_info_type bfd_mos65xx_arch;
 extern const bfd_arch_info_type bfd_ft32_arch;
 extern const bfd_arch_info_type bfd_msp430_arch;
 extern const bfd_arch_info_type bfd_mt_arch;
@@ -747,6 +749,7 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_mn10200_arch,
     &bfd_mn10300_arch,
     &bfd_moxie_arch,
+    &bfd_mos65xx_arch,
     &bfd_ft32_arch,
     &bfd_msp430_arch,
     &bfd_mt_arch,

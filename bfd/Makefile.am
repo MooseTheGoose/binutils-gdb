@@ -136,6 +136,7 @@ ALL_MACHINES = \
 	cpu-mips.lo \
 	cpu-mmix.lo \
 	cpu-moxie.lo \
+	cpu-mos65xx.lo \
 	cpu-msp430.lo \
 	cpu-mt.lo \
 	cpu-nds32.lo \
