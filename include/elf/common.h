@@ -454,6 +454,7 @@
 #define EM_CSKY_OLD		EM_MCORE
 
 /* See the above comment before you add a new EM_* value here.  */
+#define EM_MOS65XX             0x7a31
 
 /* Values for e_version.  */
 

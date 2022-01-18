@@ -1240,6 +1240,7 @@ case $cpu-$vendor in
 			| mipstx39 | mipstx39el \
 			| mmix \
 			| mn10200 | mn10300 \
+			| mos65xx \
 			| moxie \
 			| mt \
 			| msp430 \
@@ -1281,7 +1282,8 @@ case $cpu-$vendor in
 			| x86 | x86_64 | xc16x | xgate | xps100 \
 			| xstormy16 | xtensa* \
 			| ymp \
-			| z8k | z80)
+			| z8k | z80 \
+			| mos65xx)
 				;;
 
 			*)

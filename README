@@ -1,3 +1,13 @@
+# Binutils-gdb for MOS65XX
+
+This is a fork of binutils-gdb where I port the mos65xx architectures.
+This is a safe place where I can afford to break things without affecting
+the GNU binutils-gdb repo while still being able to distribute the build
+between multiple computers. This fork may not be sustained. If it becomes
+more stable and GNU is willing to accept the contribution, I will delete
+this fork when the the contribution is done.
+
+# GNU README
 		   README for GNU development tools
 
 This directory contains various GNU compilers, assemblers, linkers, 

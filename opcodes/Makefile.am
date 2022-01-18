@@ -197,6 +197,7 @@ TARGET32_LIBOPCODES_CFILES = \
 	m68hc11-opc.c \
 	m68k-dis.c \
 	m68k-opc.c \
+	mos65xx-dis.c \
 	s12z-dis.c \
 	s12z-opc.c \
 	mcore-dis.c \
