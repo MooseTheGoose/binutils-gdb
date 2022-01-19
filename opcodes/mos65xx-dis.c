@@ -1,7 +1,9 @@
 
 #include "sysdep.h"
 #include "disassemble.h"
+#include <stdio.h>
 
-int print_insn_mos65xx(bfd_vma vaddr, struct disassemble_info *info) {
-  return (uintptr_t)(vaddr + info) & 0xffff;
+int print_insn_mos65xx(bfd_vma vaddr ATTRIBUTE_UNUSED, struct disassemble_info *info ATTRIBUTE_UNUSED) {
+  printf("Badger");
+  return 1;
 }

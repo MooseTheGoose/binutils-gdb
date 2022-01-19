@@ -460,6 +460,8 @@ m68*-*-haiku*)		targ_emul=m68kelf
 			;;
 m68*-*-*)		targ_emul=m68kelf
 			;;
+mos65xx-*-*)		targ_emul=mos65xxelf
+			;;
 mcore-*-pe)		targ_emul=mcorepe ;
 			targ_extra_ofiles="deffilep.o pe-dll.o"
 			;;

@@ -1,5 +1,5 @@
 #ifndef _ELF_MOS65XX_H
-#define _ELF_MOS655X_H
+#define _ELF_MOS65XX_H
 
 #include "elf/reloc-macros.h"
 
