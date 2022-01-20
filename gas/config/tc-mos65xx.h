@@ -12,6 +12,10 @@
 extern const char EXP_CHARS[];
 extern const char FLT_CHARS[];
 
+#define LITERAL_PREFIXPERCENT_BIN
+#define LITERAL_PREFIXDOLLAR_HEX
+#define LEX_DOLLAR 0
+
 extern struct option md_longopts[];
 extern const char * md_shortopts;
 
@@ -29,5 +33,6 @@ void md_show_usage(FILE *f);
 #define md_operand(s) as_fatal("Unrecognized expression")
 #define md_estimate_size_before_relax(f, s) \
   (as_fatal("estimate_size_before_relax called"), 1)
+
 
 #endif
