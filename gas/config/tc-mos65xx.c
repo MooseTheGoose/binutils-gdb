@@ -293,7 +293,9 @@ int parse_addrmode(char *start,
           }
         }
         else if(id == MD_LEX_IDY)
-          mode = MOS65XX_ADDRMODE_ABS_IDY;
+        {
+          mode = (implied_width == MD_LEX_BYTE) ? MOS65XX_ADDRMODE_IDY : MOS65XX_ADDRMODE_ABS_IDY;
+        }
         else
           mode = MOS65XX_ADDRMODE_STK_REL;
       }
@@ -327,6 +329,7 @@ static const char *addrmode_to_string(int mode)
       case MOS65XX_ADDRMODE_ABS: addrmode = "Absolute"; break;
       case MOS65XX_ADDRMODE_LNG: addrmode = "Absolute Long"; break;
       case MOS65XX_ADDRMODE_IND_IDY: addrmode = "Indirect Direct Page Indexed Y"; break;
+      case MOS65XX_ADDRMODE_IDY: addrmode = "Direct Page Indexed Y"; break;
       case MOS65XX_ADDRMODE_IND: addrmode = "Indirect Direct Page"; break;
       case MOS65XX_ADDRMODE_STK_IND_IDY: addrmode = "Indirect Stack Relative Indexed Y"; break;
       case MOS65XX_ADDRMODE_IDX: addrmode = "Direct Page Indexed X"; break;
@@ -346,7 +349,7 @@ md_assemble(char *line)
   char nmemonic[MAX_NMEMONIC_LEN + 1];
   char *token;
   char *save_lineptr = input_line_pointer;
-  int optyp, opbase;
+  int opclass, opbase;
 
   printf("%s\n", line);
 
@@ -363,9 +366,9 @@ md_assemble(char *line)
   if(!opcode)
     as_fatal("Unrecognized nmemonic!");
 
-  optyp = MOS65XX_OPCODE_TYPE(opcode->flags);
+  opclass = MOS65XX_OPCODE_CLASS(opcode->flags);
   opbase = MOS65XX_OPCODE_BASE(opcode->flags);
-  if(optyp == MOS65XX_OPCODE_NOARGS)
+  if(opclass & MOS65XX_CLASS_IMPLIED)
   {
     if(opbase == MOS65XX_WDM_BASE)
     {
@@ -380,46 +383,19 @@ md_assemble(char *line)
   {
     struct md_lexical_operand lhs, rhs;
     int mode = parse_addrmode(line, &lhs, &rhs);
-    char opcode_prefix = 0;
+    int opcode_prefix = 0;
     printf("Address Mode: %s\n", addrmode_to_string(mode));
     if(MD_DELIMS(lhs.typ) == SYM_ID || MD_DELIMS(rhs.typ) == SYM_ID)
       as_fatal("Ummm... We don't support symbols yet. *blush*");
-    if(optyp == MOS65XX_OPCODE_ALUMEM)
-    {
-      if(mode >= MOS65XX_ADDRMODE_ACC)
-        as_fatal("Invalid addressing mode for ALU memory operation");
-      opcode_prefix = mode + opbase;
-    }
-    else if(optyp == MOS65XX_OPCODE_BITOPS)
-    {
-      if(mode == MOS65XX_ADDRMODE_ACC) {
-        opcode_prefix = opbase + 8;
-      } else if(mode == MOS65XX_ADDRMODE_PGE || mode == MOS65XX_ADDRMODE_ABS
-        	|| mode == MOS65XX_ADDRMODE_IDX || mode == MOS65XX_ADDRMODE_ABS_IDX)
-        opcode_prefix = opbase + mode;
-    }
-    else if(optyp == MOS65XX_OPCODE_LDX)
-    {
+    if((opclass & MOS65XX_MODEFLAG(mode)) == 0)
+      as_fatal("Invalid addressing mode for operand");
 
-    }
-    else if(optyp == MOS65XX_OPCODE_LDY)
-    {
-
-    }
-    else if(optyp <= MOS65XX_OPCODE_SPECIAL_BEGIN && optyp >= MOS65XX_OPCODE_SPECIAL_END)
-    {
-
-    }
-    else if(optyp == MOS65XX_OPCODE_BRANCH)
-    {
-
-    }
-    else if(optyp == MOS65XX_OPCODE_JUMP)
-    {
-
-    }
-    else
-      as_fatal("Unrecognized instruction");
+    /* 
+     *  This actually takes care of most instructions. 
+     *  Thanks to CISC, it's not exactly that easy for
+     *  all of them...
+     */
+    opcode_prefix = mode + opbase;
   }
 
   input_line_pointer = save_lineptr; 
