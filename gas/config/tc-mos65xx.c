@@ -368,7 +368,7 @@ md_assemble(char *line)
 
   opclass = MOS65XX_OPCODE_CLASS(opcode->flags);
   opbase = MOS65XX_OPCODE_BASE(opcode->flags);
-  if(opclass & MOS65XX_CLASS_IMPLIED)
+  if(opclass & MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IMPLIED))
   {
     if(opbase == MOS65XX_WDM_BASE)
     {
