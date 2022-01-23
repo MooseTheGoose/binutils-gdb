@@ -62,16 +62,17 @@
  * the final opcode. Change at your own risk.
  *
  * Note: The combination of opclass and base is unique
- *       across every instruction.
+ *       across every instruction. Also, opcodes listed
+ *       here are sorted by base.
  */
 
 /* Arithmetic instructions */
-#define MOS65XX_ADC_BASE 			0x61
-#define MOS65XX_AND_BASE 			0x21
-#define MOS65XX_CMP_BASE 			0xc1
-#define MOS65XX_EOR_BASE 			0x41
-#define MOS65XX_LDA_BASE 			0xa1
 #define MOS65XX_ORA_BASE 			0x01
+#define MOS65XX_AND_BASE 			0x21
+#define MOS65XX_EOR_BASE 			0x41
+#define MOS65XX_ADC_BASE 			0x61
+#define MOS65XX_LDA_BASE 			0xa1
+#define MOS65XX_CMP_BASE 			0xc1
 #define MOS65XX_SBC_BASE 			0xe1
 
 /* STA */
@@ -79,23 +80,23 @@
 
 /* Bitops instructions */
 #define MOS65XX_ASL_BASE 			0x02
+#define MOS65XX_ROL_BASE 			0x22
+#define MOS65XX_LSR_BASE 			0x42
+#define MOS65XX_ROR_BASE 			0x62
 #define MOS65XX_DEC_BASE 			0xc2
 #define MOS65XX_INC_BASE 			0xe2
-#define MOS65XX_LSR_BASE 			0x42
-#define MOS65XX_ROL_BASE 			0x22
-#define MOS65XX_ROR_BASE 			0x62
 
 /* Branch instructions */
-#define MOS65XX_BCC_BASE 			0x84
-#define MOS65XX_BCS_BASE 			0xa4
-#define MOS65XX_BEQ_BASE 			0xe4
-#define MOS65XX_BMI_BASE 			0x24
-#define MOS65XX_BNE_BASE 			0xc4
 #define MOS65XX_BPL_BASE 			0x04
-#define MOS65XX_BRA_BASE 			0x74
-#define MOS65XX_BRL_BASE 			0x76
+#define MOS65XX_BMI_BASE 			0x24
 #define MOS65XX_BVC_BASE 			0x44
 #define MOS65XX_BVS_BASE 			0x64
+#define MOS65XX_BRA_BASE 			0x74
+#define MOS65XX_BRL_BASE 			0x76
+#define MOS65XX_BCC_BASE 			0x84
+#define MOS65XX_BCS_BASE 			0xa4
+#define MOS65XX_BNE_BASE 			0xc4
+#define MOS65XX_BEQ_BASE 			0xe4
 
 /* IDX instructions */
 #define MOS65XX_BIT_BASE 			0x20
@@ -103,60 +104,61 @@
 
 /* Implied instructions */
 #define MOS65XX_BRK_BASE 			0x00
-#define MOS65XX_CLC_BASE 			0x18
-#define MOS65XX_CLD_BASE 			0xd8
-#define MOS65XX_CLI_BASE 			0x58
-#define MOS65XX_CLV_BASE 			0xb8
-#define MOS65XX_DEX_BASE 			0xca
-#define MOS65XX_DEY_BASE 			0x88
-#define MOS65XX_INX_BASE 			0xe8
-#define MOS65XX_INY_BASE 			0xc8
-#define MOS65XX_NOP_BASE 			0xea
-#define MOS65XX_PHA_BASE 			0x48
-#define MOS65XX_PHB_BASE 			0x8b
-#define MOS65XX_PHD_BASE 			0x0b
-#define MOS65XX_PHK_BASE 			0x4b
 #define MOS65XX_PHP_BASE 			0x08
-#define MOS65XX_PHX_BASE 			0xda
-#define MOS65XX_PHY_BASE 			0x5a
-#define MOS65XX_PLA_BASE 			0x68
-#define MOS65XX_PLB_BASE 			0xab
-#define MOS65XX_PLD_BASE 			0x2b
-#define MOS65XX_PLP_BASE 			0x28
-#define MOS65XX_PLX_BASE 			0xfa
-#define MOS65XX_PLY_BASE 			0x7a
-#define MOS65XX_RTI_BASE 			0x40
-#define MOS65XX_RTL_BASE 			0x6b
-#define MOS65XX_RTS_BASE 			0x60
-#define MOS65XX_SEC_BASE 			0x38
-#define MOS65XX_SED_BASE 			0xf8
-#define MOS65XX_SEI_BASE 			0x78
-#define MOS65XX_SEP_BASE 			0xe2
-#define MOS65XX_STP_BASE 			0xdb
-#define MOS65XX_TAX_BASE 			0xaa
-#define MOS65XX_TAY_BASE 			0xa8
-#define MOS65XX_TCD_BASE 			0x5b
+#define MOS65XX_PHD_BASE 			0x0b
+#define MOS65XX_CLC_BASE 			0x18
 #define MOS65XX_TCS_BASE 			0x1b
-#define MOS65XX_TDC_BASE 			0x7b
+#define MOS65XX_PLP_BASE 			0x28
+#define MOS65XX_PLD_BASE 			0x2b
+#define MOS65XX_SEC_BASE 			0x38
 #define MOS65XX_TSC_BASE 			0x3b
-#define MOS65XX_TSX_BASE 			0xba
+#define MOS65XX_RTI_BASE 			0x40
+#define MOS65XX_WDM_BASE 			0x42
+#define MOS65XX_PHA_BASE 			0x48
+#define MOS65XX_PHK_BASE 			0x4b
+#define MOS65XX_CLI_BASE 			0x58
+#define MOS65XX_PHY_BASE 			0x5a
+#define MOS65XX_TCD_BASE 			0x5b
+#define MOS65XX_RTS_BASE 			0x60
+#define MOS65XX_PLA_BASE 			0x68
+#define MOS65XX_RTL_BASE 			0x6b
+#define MOS65XX_SEI_BASE 			0x78
+#define MOS65XX_PLY_BASE 			0x7a
+#define MOS65XX_TDC_BASE 			0x7b
+#define MOS65XX_DEY_BASE 			0x88
 #define MOS65XX_TXA_BASE 			0x8a
+#define MOS65XX_PHB_BASE 			0x8b
+#define MOS65XX_TYA_BASE 			0x98
 #define MOS65XX_TXS_BASE 			0x9a
 #define MOS65XX_TXY_BASE 			0x9b
-#define MOS65XX_TYA_BASE 			0x98
+#define MOS65XX_TAY_BASE 			0xa8
+#define MOS65XX_TAX_BASE 			0xaa
+#define MOS65XX_PLB_BASE 			0xab
+#define MOS65XX_CLV_BASE 			0xb8
+#define MOS65XX_TSX_BASE 			0xba
 #define MOS65XX_TYX_BASE 			0xbb
+#define MOS65XX_INY_BASE 			0xc8
+#define MOS65XX_DEX_BASE 			0xca
 #define MOS65XX_WAI_BASE 			0xcb
-#define MOS65XX_WDM_BASE 			0x42
+#define MOS65XX_CLD_BASE 			0xd8
+#define MOS65XX_PHX_BASE 			0xda
+#define MOS65XX_STP_BASE 			0xdb
+#define MOS65XX_SEP_BASE 			0xe2
+#define MOS65XX_INX_BASE 			0xe8
+#define MOS65XX_NOP_BASE 			0xea
 #define MOS65XX_XBA_BASE 			0xeb
+#define MOS65XX_SED_BASE 			0xf8
+#define MOS65XX_PLX_BASE 			0xfa
 #define MOS65XX_XCE_BASE 			0xfb
+
 
 /* IMM instructions */
 #define MOS65XX_COP_BASE 			0x02
 #define MOS65XX_REP_BASE 			0xc2
 
 /* CPXY instructions */
-#define MOS65XX_CPX_BASE 			0xe0
 #define MOS65XX_CPY_BASE 			0xc0
+#define MOS65XX_CPX_BASE 			0xe0
 
 /* JMP */
 #define MOS65XX_JMP_BASE 			0x40
@@ -168,8 +170,8 @@
 #define MOS65XX_LDX_BASE 			0xa2
 
 /* BLK instructions */
-#define MOS65XX_MVN_BASE 			0x54
 #define MOS65XX_MVP_BASE 			0x44
+#define MOS65XX_MVN_BASE 			0x54
 
 /* PEA */
 #define MOS65XX_PEA_BASE 			0xe8
@@ -192,8 +194,8 @@
 
 
 /* TB Instructions */
-#define MOS65XX_TRB_BASE 			0x10
 #define MOS65XX_TSB_BASE 			0x00
+#define MOS65XX_TRB_BASE 			0x10
 
 
 #define MOS65XX_ADC_CLASS 	MOS65XX_OPCLASS_ALUMEM

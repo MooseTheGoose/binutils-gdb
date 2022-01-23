@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
+/* Opcodes must be in alphabetical order for bsearch */
 static const struct mos65xx_oplookup
 mos65xx_opcodes[] = 
 {
