@@ -59,4 +59,23 @@ void md_show_usage(FILE *f);
 #define MOS65XX_OPERAND_ACC 		MOS65XX_ADDRMODE_ACC
 #define MOS65XX_OPERAND_INVALID 	MOS65XX_ADDRMODE_INVALID
 
+#define MOS65XX_SIZEOF_BYTE 		1
+#define MOS65XX_SIZEOF_WORD 		2
+#define MOS65XX_SIZEOF_LONG 		3
+#define MOS65XX_SIZEOF(X_md) 		((X_md) & 0x3)
+#define MOS65XX_IMMFLAG 		4
+#define MOS65XX_IMM(X_md) 		((X_md) & MOS65XX_IMMFLAG)
+
+#define MOS65XX_REG_A 			1
+#define MOS65XX_REG_X 			2
+#define MOS65XX_REG_Y 			3
+#define MOS65XX_REG_S 			4
+
+struct mos65xx_operand
+{ 
+  uint8_t typ;
+  expressionS lhs;
+  expressionS rhs;
+};
+
 #endif

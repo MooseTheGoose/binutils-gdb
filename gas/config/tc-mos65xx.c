@@ -38,239 +38,213 @@ md_begin()
   literal_prefix_dollar_hex = true;
 }
 
-#define FORCE_SIZE_SUFFIX ':'
-
-#define MD_LEX_NONE 	0x0
-#define MD_LEX_IDX 	'X'
-#define MD_LEX_IDY 	'Y'
-#define MD_LEX_A 	'A'
-#define MD_LEX_S 	'S'
-#define MD_LEX_BYTE 	'B'
-#define MD_LEX_WORD 	'W'
-#define MD_LEX_LONG 	'L'
-#define MD_REGNUM(x) 	((x) & 0x7f)
-#define MD_LEX_SYM 	(SYM_ID << 8)
-#define MD_LEX_REG 	(REG_ID << 8)
-#define MD_LEX_ADDR 	(ADDR_ID << 8)
-#define MD_DELIMS(x) 	((x) >> 8 & 0x7f)
-#define MD_LEX_IMM_FLAG 0x8000
-
-#define IND_OPEN 	'('
-#define IND_CLOSE 	')'
-#define IND_LNG_OPEN 	'['
-#define IND_LNG_CLOSE 	']'
-#define IMM_PRE  	'#'
-#define SYM_ID 		'M'
-#define COMMA_ID 	','
-#define REG_ID 		'R'
-#define ADDR_ID 	'0'
- 
-struct md_lexical_operand 
-{
-  uint16_t typ;
-  expressionS ex;
-};
-
-static void mos65xx_construct_lex_symbol(char **s, struct md_lexical_operand *op)
+#define MOS65XX_FORCE_SIZE_SUFFIX 	':'
+#define MOS65XX_IMM_PREFIX 		'#'
+static void mos65xx_lex_expr(char **s, expressionS *exp)
 {
   char *suffix_delim;
   char prefix;
+  int X_md = 0;
+
   input_line_pointer = *s;
   prefix = *input_line_pointer;
-  if(prefix == IMM_PRE)
+  if(prefix == MOS65XX_IMM_PREFIX)
+  {
+    X_md |= MOS65XX_IMMFLAG;
     input_line_pointer++;
-  suffix_delim = strchr(input_line_pointer, FORCE_SIZE_SUFFIX);
+  }
+  
+  suffix_delim = strchr(input_line_pointer, MOS65XX_FORCE_SIZE_SUFFIX);
   if(suffix_delim)
     *suffix_delim = 0;
-  expression(&op->ex);
+  expression(exp);
   if(suffix_delim)
-    *suffix_delim = FORCE_SIZE_SUFFIX;
+    *suffix_delim = MOS65XX_FORCE_SIZE_SUFFIX;
 
-  if(op->ex.X_op == O_symbol)
+  if(exp->X_op == O_symbol)
   {
-    op->typ = MD_LEX_SYM;
-    const char *name = S_GET_NAME(op->ex.X_add_symbol);
+    const char *name = S_GET_NAME(exp->X_add_symbol);
     char test = toupper(*name);
-    if((test == MD_LEX_A || test == MD_LEX_IDX || test == MD_LEX_IDY || test == MD_LEX_S)
-  	&& name[1] == 0)
+    if(test && name[1] == 0)
     {
-      op->typ = (test | MD_LEX_REG);
+      exp->X_op = O_register;
+      switch(test)
+      {
+        case 'A': exp->X_add_number = MOS65XX_REG_A; break;
+        case 'X': exp->X_add_number = MOS65XX_REG_X; break;
+        case 'Y': exp->X_add_number = MOS65XX_REG_Y; break;
+        case 'S': exp->X_add_number = MOS65XX_REG_S; break;
+        default: exp->X_op = O_symbol; break;
+      } 
     }
   }
-  else if(op->ex.X_op != O_constant)
+  else if(exp->X_op != O_constant)
   {
-    if(op->ex.X_op == O_illegal)
+    if(exp->X_op == O_illegal)
       as_fatal("illegal expression");
-    else if(op->ex.X_op == O_absent)
+    else if(exp->X_op == O_absent)
       as_fatal("expected expression here");
     else
       as_fatal("Complex expressions unsupported");
   }
-  if(*input_line_pointer == FORCE_SIZE_SUFFIX)
+  if(*input_line_pointer == MOS65XX_FORCE_SIZE_SUFFIX)
   {
     char test = toupper(input_line_pointer[1]);
-    if(test == MD_LEX_BYTE || test == MD_LEX_WORD || test == MD_LEX_LONG)
+    switch(test)
     {
-      if(MD_DELIMS(op->typ) == REG_ID)
-    	as_fatal("Tried to force size of register");
-      op->typ |= test;
-      input_line_pointer += 2;
+      case 'B': X_md |= MOS65XX_SIZEOF_BYTE; break;
+      case 'W': X_md |= MOS65XX_SIZEOF_WORD; break;
+      case 'L': X_md |= MOS65XX_SIZEOF_LONG; break;
+      default: as_fatal("Unrecognized size suffix"); break;
     }
-    else
-    {
-      as_fatal("Unrecognized size suffix");
-    }
+    if(exp->X_op == O_register)
+      as_fatal("Tried to force size of register");
+    input_line_pointer += 2;
   }
   *s = input_line_pointer;
-  if(prefix == IMM_PRE)
-  {
-    if(MD_DELIMS(op->typ) == REG_ID)
+  if(X_md & MOS65XX_IMMFLAG)
+    if(exp->X_op == O_register)
       as_fatal("Tried to make register an immediate");
-    op->typ |= MD_LEX_IMM_FLAG;
-  }
+  exp->X_md = X_md;
 }
 
-#define SKIP_SPACES(s) while(*s && isspace(*s)) s++
-
+#define SKIP_SPACES(s) 		while(*s && isspace(*s)) s++
+#define MOS65XX_IND_OPEN  	'('
+#define MOS65XX_IND_CLOSE 	')'
+#define MOS65XX_IND_LNG_OPEN 	'['
+#define MOS65XX_IND_LNG_CLOSE 	']'
+#define MOS65XX_COMMA 		','
 static 
-int parse_operand(char *start, 
-  struct md_lexical_operand *lhs, struct md_lexical_operand *rhs)
+void parse_operand(char *start, struct mos65xx_operand *op)
 {
   unsigned int id;
-  int mode = MOS65XX_OPERAND_IMPLIED;
-  
-  lhs->typ = MD_LEX_NONE;
-  rhs->typ = MD_LEX_NONE;
+
+  op->typ = MOS65XX_OPERAND_IMPLIED; 
   SKIP_SPACES(start);
-  id = (*start == IND_OPEN || *start == IND_LNG_OPEN);
+  id = (*start == MOS65XX_IND_OPEN || *start == MOS65XX_IND_LNG_OPEN);
   if(id) start++;
-  if(strchr(start, IND_OPEN) || strchr(start, IND_LNG_OPEN))
+  if(strchr(start, MOS65XX_IND_OPEN) || strchr(start, MOS65XX_IND_LNG_OPEN))
     as_fatal("Brackets must not be nested and must appear right after the nmemonic");
   if(id) start--;
 
-  if(*start == IND_OPEN)
+  if(*start == MOS65XX_IND_OPEN)
   {
-    mode = MOS65XX_OPERAND_IND;
+    op->typ = MOS65XX_OPERAND_IND;
     start++;
     SKIP_SPACES(start);
-    mos65xx_construct_lex_symbol(&start, lhs);
-    if(MD_DELIMS(lhs->typ) == REG_ID)
+    mos65xx_lex_expr(&start, &op->lhs);
+    if(op->lhs.X_op == O_register)
       as_fatal("Didn't expect register for first operand of indirect");
     SKIP_SPACES(start);
     id = *start++;
-    if(id == COMMA_ID)
+    if(id == MOS65XX_COMMA)
     {
       /* Expect either SR indexed or indirect X. Assume indirect X first. */
-      mode = MOS65XX_OPERAND_IND_IDX;
+      op->typ = MOS65XX_OPERAND_IND_IDX;
       SKIP_SPACES(start);
-      mos65xx_construct_lex_symbol(&start, rhs);
-      id = MD_REGNUM(rhs->typ);
-      if((lhs->typ & MD_LEX_IMM_FLAG) && MD_DELIMS(rhs->typ) != REG_ID && id != MD_LEX_S)
+      mos65xx_lex_expr(&start, &op->rhs);
+      if(MOS65XX_IMM(op->lhs.X_md) && (op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_S))
         as_fatal("Expected S register after immediate for Stack Relative Indexing");
-      else if(MD_DELIMS(rhs->typ) != REG_ID && id != MD_LEX_IDX && id != MD_LEX_S)
+      else if(op->rhs.X_op != O_register || op->rhs.X_op != MOS65XX_REG_X)
         as_fatal("Expected X register after address for Indirect Indexing");
       SKIP_SPACES(start);
-      if(*start++ != IND_CLOSE)
+      if(*start++ != MOS65XX_IND_CLOSE)
         as_fatal("Expected ')' in Indexing");
-      if(id == MD_LEX_S)
+      if(op->rhs.X_add_number == MOS65XX_REG_S)
       {
         /* Stack relative indirect indexed */
-        mode = MOS65XX_OPERAND_STK_IND_IDY;
+        op->typ = MOS65XX_OPERAND_STK_IND_IDY;
         SKIP_SPACES(start);
-        if(*start++ != COMMA_ID)
+        if(*start++ != MOS65XX_COMMA)
           as_fatal("Expected ',' in Stack Relative Indirect Indexed");
         SKIP_SPACES(start);
-        mos65xx_construct_lex_symbol(&start, rhs);
-        if(MD_REGNUM(rhs->typ) != MD_LEX_IDY || MD_DELIMS(rhs->typ) != REG_ID)
+        mos65xx_lex_expr(&start, &op->rhs);
+        if(op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_Y)
           as_fatal("Expected 'Y' for Stack Relative Indirect Indexed"); 
       } 
     }
-    else if(id == IND_CLOSE)
+    else if(id == MOS65XX_IND_CLOSE)
     {
       /* Expect indirect Y or just indirect */
       SKIP_SPACES(start);
       if(*start)
       {
-        mode = MOS65XX_OPERAND_IND_IDY;
-        if(*start++ != COMMA_ID)
+        op->typ = MOS65XX_OPERAND_IND_IDY;
+        if(*start++ != MOS65XX_COMMA)
           as_fatal("Expected ',' for DP Indirect Indexed Y");
         SKIP_SPACES(start);
-        mos65xx_construct_lex_symbol(&start, rhs);
-        if(MD_REGNUM(rhs->typ) != MD_LEX_IDY || MD_DELIMS(rhs->typ) != REG_ID)
+        mos65xx_lex_expr(&start, &op->rhs);
+        if(op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_Y)
           as_fatal("Expected 'Y' for DP Indirect Indexed Y");
       }
     }
     else
       as_fatal("Expected ',' or ')' in DP Indirect");
   }
-  else if(*start == IND_LNG_OPEN)
+  else if(*start == MOS65XX_IND_LNG_OPEN)
   {
-    mode = MOS65XX_OPERAND_IND_LNG;
+    op->typ = MOS65XX_OPERAND_IND_LNG;
     start++;
     SKIP_SPACES(start);
-    mos65xx_construct_lex_symbol(&start, lhs);
+    mos65xx_lex_expr(&start, &op->lhs);
 
-    if(MD_DELIMS(lhs->typ) == REG_ID)
+    if(op->lhs.X_op == O_register)
       as_fatal("Didn't expect register for first operand of Indirect Long");
 
     SKIP_SPACES(start);
-    if(*start++ != IND_LNG_CLOSE)
+    if(*start++ != MOS65XX_IND_LNG_CLOSE)
       as_fatal("Expected ']' to close Indirect Long address");
     SKIP_SPACES(start);
-    if(*start == COMMA_ID)
+    if(*start == MOS65XX_COMMA)
     {
-      mode = MOS65XX_OPERAND_IND_LNG_IDY;
+      op->typ = MOS65XX_OPERAND_IND_LNG_IDY;
       start++;
       SKIP_SPACES(start);
-      mos65xx_construct_lex_symbol(&start, rhs);
-      if(MD_DELIMS(rhs->typ) != REG_ID || MD_REGNUM(rhs->typ) != MD_LEX_IDY)
+      mos65xx_lex_expr(&start, &op->rhs);
+      if(op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_Y)
         as_fatal("Expected 'Y' register for Indirect Long Indexed");
     }
   }
   else if(*start)
   {
-    mode = MOS65XX_OPERAND_ACC;
-    mos65xx_construct_lex_symbol(&start, lhs);
-    id = MD_DELIMS(lhs->typ);
-    if(id == REG_ID && MD_REGNUM(lhs->typ) != MD_LEX_A)
+    op->typ = MOS65XX_OPERAND_ACC;
+    mos65xx_lex_expr(&start, &op->lhs);
+    if(op->lhs.X_op == O_register && op->lhs.X_add_number != MOS65XX_REG_A)
       as_fatal("Only A register can be used as first argument");
-
-    /* Consider making stack relative use an immediate instead of an address */
-    else if(lhs->typ & MD_LEX_IMM_FLAG)
+    else if(MOS65XX_IMM(op->lhs.X_md))
     {
-      mode = MOS65XX_OPERAND_IMM;
+      op->typ = MOS65XX_OPERAND_IMM;
       SKIP_SPACES(start);
-      if(*start == COMMA_ID)
+      if(*start == MOS65XX_COMMA)
       {
         start++;
         SKIP_SPACES(start);
-        mos65xx_construct_lex_symbol(&start, rhs);
-        if(rhs->typ & MD_LEX_IMM_FLAG)
-          mode = MOS65XX_OPERAND_BLK;
-        else if(MD_DELIMS(rhs->typ) == REG_ID && MD_REGNUM(rhs->typ) == MD_LEX_S)
-          mode = MOS65XX_OPERAND_STK_REL;
+        mos65xx_lex_expr(&start, &op->rhs);
+        if(MOS65XX_IMM(op->rhs.X_md))
+          op->typ = MOS65XX_OPERAND_BLK;
+        else if(op->rhs.X_op == O_register  && op->rhs.X_add_number == MOS65XX_REG_S)
+          op->typ = MOS65XX_OPERAND_STK_REL;
         else
           as_fatal("Expected block or stack relative addressing mode");
       } 
     }
-    else if(id != REG_ID)
+    else if(op->lhs.X_op != O_register)
     {
-      mode = MOS65XX_OPERAND_PGE;
+      op->typ = MOS65XX_OPERAND_PGE;
       SKIP_SPACES(start);
-      if(*start == COMMA_ID)
+      if(*start == MOS65XX_COMMA)
       {
         start++;
         SKIP_SPACES(start);
-        mos65xx_construct_lex_symbol(&start, rhs);
-        id = MD_REGNUM(rhs->typ);
-        if(MD_DELIMS(rhs->typ) != REG_ID)
+        mos65xx_lex_expr(&start, &op->rhs);
+        if(op->rhs.X_op != O_register)
           as_fatal("Expected register for Absolute Indexing");
-        else if(id == MD_LEX_A || id == MD_LEX_S)
+        else if(op->rhs.X_add_number == MOS65XX_REG_A || op->rhs.X_add_number == MOS65XX_REG_S)
           as_fatal("Expected 'X' or 'Y' register for Absolute Indexing");
-        else if(id == MD_LEX_IDX)
-          mode = MOS65XX_OPERAND_IDX;
+        else if(op->rhs.X_add_number == MOS65XX_REG_X)
+          op->typ = MOS65XX_OPERAND_IDX;
         else
-          mode = MOS65XX_OPERAND_IDY;
+          op->typ = MOS65XX_OPERAND_IDY;
       }
     }
   }
@@ -278,7 +252,6 @@ int parse_operand(char *start,
   SKIP_SPACES(start);
   if(*start)
     as_fatal("Encountered junk at the end of operand");
-  return mode;
 }
 
 #define SKIP_SPACES(s) while(*s && isspace(*s)) s++
@@ -354,6 +327,50 @@ coerce_operand_to_addrmode(int operand, uint32_t modeflags, int width)
   return mode;
 }
 
+static uint8_t
+generate_opcode_prefix(int addrmode, struct mos65xx_op opcode)
+{
+  int opcode_prefix;
+  if((MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)
+  {
+    if(addrmode == MOS65XX_ADDRMODE_IMPLIED)
+    {
+      if(opcode.opclass == MOS65XX_OPCLASS_BITOPS)
+        addrmode = MOS65XX_ADDRMODE_ACC;
+    }
+    if((MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)
+      as_fatal("Invalid addressing mode for instruction");
+  }
+
+  /* Prepare yourself for some magic... */ 
+  opcode_prefix = opcode.base + mos65xx_addrmode_addends[addrmode];
+  if(addrmode == MOS65XX_ADDRMODE_IMM)
+  {
+    if(opcode.opclass == MOS65XX_OPCLASS_IDX && opcode.base == MOS65XX_BIT_BASE)
+      opcode_prefix = 0x89;
+    else if(opcode.opclass == MOS65XX_OPCLASS_ALUMEM)
+      opcode_prefix += 0x8;
+  }
+  else if(addrmode == MOS65XX_ADDRMODE_ACC)
+  {
+    if(opcode.opclass == MOS65XX_OPCLASS_BITOPS)
+    {
+      if(opcode.base == MOS65XX_INC_BASE)
+        opcode_prefix = 0x1a;
+      else if(opcode.base == MOS65XX_DEC_BASE)
+        opcode_prefix = 0x3a;
+    }
+  }
+  else if(opcode.opclass == MOS65XX_OPCLASS_STZ)
+  {
+    if(addrmode == MOS65XX_ADDRMODE_ABS)
+      opcode_prefix = 0x9c;
+    else if(addrmode == MOS65XX_ADDRMODE_ABS_IDX)
+      opcode_prefix = 0x9e;
+  }
+  return opcode_prefix & 0xff;
+}
+
 void
 md_assemble(char *line)
 {
@@ -387,54 +404,17 @@ md_assemble(char *line)
   }
   else
   {
-    struct md_lexical_operand lhs, rhs;
     int opcode_prefix;
-    int operand = parse_operand(line, &lhs, &rhs);
-    if(MD_DELIMS(lhs.typ) == SYM_ID || MD_DELIMS(rhs.typ) == SYM_ID)
+    struct mos65xx_operand operand;
+    parse_operand(line, &operand);
+    if(operand.rhs.X_op == O_symbol || operand.lhs.X_op == O_symbol)
       as_fatal("Ummm... We don't support symbols yet. *blush*");
-    print_operand(operand);
-    int addrmode = coerce_operand_to_addrmode(operand, opcode.modeflags, 0);
+    print_operand(operand.typ);
+    int addrmode = coerce_operand_to_addrmode(operand.typ, opcode.modeflags, 0);
 
     printf("modeflags: %x\n", opcode.modeflags);
     printf("mode: %x\n", MOS65XX_MODEFLAG(addrmode));
-    if((MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)
-    {
-      if(addrmode == MOS65XX_ADDRMODE_IMPLIED)
-      {
-        if(opcode.opclass == MOS65XX_OPCLASS_BITOPS)
-          addrmode = MOS65XX_ADDRMODE_ACC;
-      }
-      if((MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)
-        as_fatal("Invalid addressing mode for instruction");
-    }
-
-    /* Prepare yourself for some magic... */ 
-    opcode_prefix = opcode.base + mos65xx_addrmode_addends[addrmode];
-    if(addrmode == MOS65XX_ADDRMODE_IMM)
-    {
-      if(opcode.opclass == MOS65XX_OPCLASS_IDX && opcode.base == MOS65XX_BIT_BASE)
-        opcode_prefix = 0x89;
-      else if(opcode.opclass == MOS65XX_OPCLASS_ALUMEM)
-        opcode_prefix += 0x8;
-    }
-    else if(addrmode == MOS65XX_ADDRMODE_ACC)
-    {
-      if(opcode.opclass == MOS65XX_OPCLASS_BITOPS)
-      {
-        if(opcode.base == MOS65XX_INC_BASE)
-          opcode_prefix = 0x1a;
-        else if(opcode.base == MOS65XX_DEC_BASE)
-          opcode_prefix = 0x3a;
-      }
-    }
-    else if(opcode.opclass == MOS65XX_OPCLASS_STZ)
-    {
-      if(addrmode == MOS65XX_ADDRMODE_ABS)
-        opcode_prefix = 0x9c;
-      else if(addrmode == MOS65XX_ADDRMODE_ABS_IDX)
-        opcode_prefix = 0x9e;
-    }
-    opcode_prefix &= 0xff;
+    opcode_prefix = generate_opcode_prefix(addrmode, opcode);
 
     if(opcode.modeflags & (MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_PCREL) | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_PCREL16)))
       as_fatal("PC Relative addressing is just so much nope right now...");
