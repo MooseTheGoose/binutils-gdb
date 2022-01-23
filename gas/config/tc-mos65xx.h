@@ -1,6 +1,8 @@
 #ifndef TC_MOS65XX
 #define TC_MOS65XX
 
+#include <opcode/mos65xx.h>
+
 #define TARGET_ARCH	bfd_arch_mos65xx
 #define BFD_ARCH	TARGET_ARCH
 #define TARGET_FORMAT	"elf32-mos65xx"
@@ -34,5 +36,27 @@ void md_show_usage(FILE *f);
 #define md_estimate_size_before_relax(f, s) \
   (as_fatal("estimate_size_before_relax called"), 1)
 
+/*
+ *  The grammar of typical 65816 assembly is actually
+ *  ambiguous. This is because some addressing modes
+ *  look the same but differ in operand size. Operand
+ *  types defined so that parser can first determine form,
+ *  then size after more context is gathered.
+ */
+#define MOS65XX_OPERAND_IND_IDX 	MOS65XX_ADDRMODE_IND_IDX
+#define MOS65XX_OPERAND_STK_REL 	MOS65XX_ADDRMODE_STK_REL
+#define MOS65XX_OPERAND_PGE 		MOS65XX_ADDRMODE_PGE
+#define MOS65XX_OPERAND_IND_LNG_IDY 	MOS65XX_ADDRMODE_IND_LNG_IDY
+#define MOS65XX_OPERAND_IMM 		MOS65XX_ADDRMODE_IMM
+#define MOS65XX_OPERAND_IND_IDY 	MOS65XX_ADDRMODE_IND_IDY
+#define MOS65XX_OPERAND_IND 		MOS65XX_ADDRMODE_IND
+#define MOS65XX_OPERAND_STK_IND_IDY 	MOS65XX_ADDRMODE_STK_IND_IDY
+#define MOS65XX_OPERAND_IDX 		MOS65XX_ADDRMODE_IDX
+#define MOS65XX_OPERAND_IND_LNG 	MOS65XX_ADDRMODE_IND_LNG
+#define MOS65XX_OPERAND_IDY 		MOS65XX_ADDRMODE_IDY
+#define MOS65XX_OPERAND_BLK 		MOS65XX_ADDRMODE_BLK
+#define MOS65XX_OPERAND_IMPLIED 	MOS65XX_ADDRMODE_IMPLIED
+#define MOS65XX_OPERAND_ACC 		MOS65XX_ADDRMODE_ACC
+#define MOS65XX_OPERAND_INVALID 	MOS65XX_ADDRMODE_INVALID
 
 #endif
