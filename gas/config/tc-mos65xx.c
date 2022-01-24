@@ -145,7 +145,7 @@ void parse_operand(char *start, struct mos65xx_operand *op)
       mos65xx_lex_expr(&start, &op->rhs);
       if(MOS65XX_IMM(op->lhs.X_md) && (op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_S))
         as_fatal("Expected S register after immediate for Stack Relative Indexing");
-      else if(op->rhs.X_op != O_register || op->rhs.X_op != MOS65XX_REG_X)
+      else if(op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_X)
         as_fatal("Expected X register after address for Indirect Indexing");
       SKIP_SPACES(start);
       if(*start++ != MOS65XX_IND_CLOSE)
@@ -288,7 +288,7 @@ struct ambiguous_mode_data
 };
 
 static int
-coerce_operand_to_addrmode(int operand, uint32_t modeflags, int width)
+coerce_operand_to_addrmode(int operand, uint32_t modeflags, int szof)
 {
   int mode = operand;
   int i;
@@ -303,16 +303,15 @@ coerce_operand_to_addrmode(int operand, uint32_t modeflags, int width)
     { MOS65XX_OPERAND_IND_LNG, MOS65XX_ADDRMODE_IND_LNG, MOS65XX_ADDRMODE_ABS_IND_LNG, MOS65XX_ADDRMODE_INVALID }
   };
 
-  /* TODO: Replace magic numbers wtih MOS65XX_BYTE_WIDTH, MOS65XX_WORD_WIDTH, MOS65XX_LONG_WIDTH */
-  if(width != 0 && width != 8 && width != 16 && width != 24)
-    as_fatal("Expected width to be 0, 8, 16, or 24 bits");
+  if(szof != 0 && szof != MOS65XX_SIZEOF_BYTE  && szof != MOS65XX_SIZEOF_WORD && szof != MOS65XX_SIZEOF_LONG)
+    as_fatal("Expected size of operand to be 0, 1, 2, or 3 bytes");
  
   for(i = 0; i < (int)(sizeof(ambiguous_modes) / sizeof(ambiguous_modes[0])); i++)
   {
     const struct ambiguous_mode_data *data = ambiguous_modes + i;
     if(operand == data->operand)
     {
-      uint8_t preferred_mode = (width == 8) ? data->mode_8 : ((width == 16) ? data->mode_16 : data->mode_24);
+      uint8_t preferred_mode = (szof == MOS65XX_SIZEOF_BYTE) ? data->mode_8 : ((szof == MOS65XX_SIZEOF_WORD) ? data->mode_16 : data->mode_24);
       if(preferred_mode != MOS65XX_ADDRMODE_INVALID && (modeflags & MOS65XX_MODEFLAG(preferred_mode)))
         mode = preferred_mode;
       else if(data->mode_8 != MOS65XX_ADDRMODE_INVALID && (modeflags & MOS65XX_MODEFLAG(data->mode_8)))
@@ -331,7 +330,7 @@ static uint8_t
 generate_opcode_prefix(int addrmode, struct mos65xx_op opcode)
 {
   int opcode_prefix;
-  if((MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)
+  if(addrmode == MOS65XX_ADDRMODE_INVALID || (MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)
   {
     if(addrmode == MOS65XX_ADDRMODE_IMPLIED)
     {
@@ -369,6 +368,53 @@ generate_opcode_prefix(int addrmode, struct mos65xx_op opcode)
       opcode_prefix = 0x9e;
   }
   return opcode_prefix & 0xff;
+}
+
+static void
+emit_insn(int addrmode, uint8_t opcode_prefix, struct mos65xx_operand operand)
+{
+  char *frag;
+  int32_t lhs_val = operand.lhs.X_add_number;
+  int32_t rhs_val = operand.rhs.X_add_number;
+  int width1 = 0;
+  int width2 = 0;
+  switch(addrmode)
+  {
+    case MOS65XX_ADDRMODE_BLK:
+      width1 = MOS65XX_SIZEOF_BYTE;
+      width2 = MOS65XX_SIZEOF_BYTE;
+      break;
+    case MOS65XX_ADDRMODE_PGE:
+    case MOS65XX_ADDRMODE_IND_LNG:
+    case MOS65XX_ADDRMODE_IMM:
+    case MOS65XX_ADDRMODE_IND_IDY:
+    case MOS65XX_ADDRMODE_IND_IDX:
+    case MOS65XX_ADDRMODE_IND:
+    case MOS65XX_ADDRMODE_STK_IND_IDY:
+    case MOS65XX_ADDRMODE_IDX:
+    case MOS65XX_ADDRMODE_IND_LNG_IDY:
+    case MOS65XX_ADDRMODE_IDY:
+      width1 = MOS65XX_SIZEOF_BYTE;
+      break;
+    case MOS65XX_ADDRMODE_ABS:
+    case MOS65XX_ADDRMODE_ABS_IDY:
+    case MOS65XX_ADDRMODE_ABS_IDX:
+    case MOS65XX_ADDRMODE_ABS_IND:
+    case MOS65XX_ADDRMODE_ABS_IND_IDX:
+    case MOS65XX_ADDRMODE_ABS_IND_LNG:
+      width1 = MOS65XX_SIZEOF_WORD; 
+      break;
+    case MOS65XX_ADDRMODE_LNG:
+    case MOS65XX_ADDRMODE_ABS_LNG_IDX:
+      width1 = MOS65XX_SIZEOF_LONG;
+      break;
+  }
+  frag = frag_more(1 + width1 + width2);
+  frag[0] = opcode_prefix;
+  if(width1 != 0)
+    md_number_to_chars(frag + 1, lhs_val, width1); 
+  if(width2 != 0)
+    md_number_to_chars(frag + 1 + width1, rhs_val, width2);
 }
 
 void
@@ -410,7 +456,8 @@ md_assemble(char *line)
     if(operand.rhs.X_op == O_symbol || operand.lhs.X_op == O_symbol)
       as_fatal("Ummm... We don't support symbols yet. *blush*");
     print_operand(operand.typ);
-    int addrmode = coerce_operand_to_addrmode(operand.typ, opcode.modeflags, 0);
+    printf("Preferred Size: %d\n", MOS65XX_SIZEOF(operand.lhs.X_md));
+    int addrmode = coerce_operand_to_addrmode(operand.typ, opcode.modeflags, MOS65XX_SIZEOF(operand.lhs.X_md));
 
     printf("modeflags: %x\n", opcode.modeflags);
     printf("mode: %x\n", MOS65XX_MODEFLAG(addrmode));
@@ -418,20 +465,7 @@ md_assemble(char *line)
 
     if(opcode.modeflags & (MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_PCREL) | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_PCREL16)))
       as_fatal("PC Relative addressing is just so much nope right now...");
-    else if(addrmode == MOS65XX_ADDRMODE_BLK)
-      as_fatal("Block addressing is also just so much nope right now...");
-    else
-    {
-      /*
-       *  This very clearly does not work.
-       *  This is just a placeholder for now
-       *  while I think of how to refactor this
-       *  assembler...
-       */
-      int frag_bytes = 1;
-      char *frag = frag_more(frag_bytes);
-      frag[0] = opcode_prefix;
-    }
+    emit_insn(addrmode, opcode_prefix, operand);
   }
 
   input_line_pointer = save_lineptr; 
