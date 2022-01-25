@@ -122,7 +122,8 @@ static uint32_t mos65xx_opclass_modeflags[MOS65XX_OPCLASS_MAX] =
   MOS65XX_STX_MODEFLAGS,
   MOS65XX_STY_MODEFLAGS,
   MOS65XX_STZ_MODEFLAGS,
-  MOS65XX_TB_MODEFLAGS 
+  MOS65XX_TB_MODEFLAGS,
+  MOS65XX_BRANCHLONG_MODEFLAGS 
 };
 
 /*
@@ -177,3 +178,43 @@ struct mos65xx_op
   return fill_in;
 }
 
+void
+mos65xx_addrmode_widths(int addrmode, struct mos65xx_arg_widths *widths)
+{
+  int width1 = 0;
+  int width2 = 0;
+
+  switch(addrmode)
+  {
+    case MOS65XX_ADDRMODE_BLK:
+      width1 = MOS65XX_SIZEOF_BYTE;
+      width2 = MOS65XX_SIZEOF_BYTE;
+      break;
+    case MOS65XX_ADDRMODE_PGE:
+    case MOS65XX_ADDRMODE_IND_LNG:
+    case MOS65XX_ADDRMODE_IMM:
+    case MOS65XX_ADDRMODE_IND_IDY:
+    case MOS65XX_ADDRMODE_IND_IDX:
+    case MOS65XX_ADDRMODE_IND:
+    case MOS65XX_ADDRMODE_STK_IND_IDY:
+    case MOS65XX_ADDRMODE_IDX:
+    case MOS65XX_ADDRMODE_IND_LNG_IDY:
+    case MOS65XX_ADDRMODE_IDY:
+      width1 = MOS65XX_SIZEOF_BYTE;
+      break;
+    case MOS65XX_ADDRMODE_ABS:
+    case MOS65XX_ADDRMODE_ABS_IDY:
+    case MOS65XX_ADDRMODE_ABS_IDX:
+    case MOS65XX_ADDRMODE_ABS_IND:
+    case MOS65XX_ADDRMODE_ABS_IND_IDX:
+    case MOS65XX_ADDRMODE_ABS_IND_LNG:
+      width1 = MOS65XX_SIZEOF_WORD;
+      break;
+    case MOS65XX_ADDRMODE_LNG:
+    case MOS65XX_ADDRMODE_ABS_LNG_IDX:
+      width1 = MOS65XX_SIZEOF_LONG;
+      break;
+  }
+  widths->width1 = width1;
+  widths->width2 = width2;
+}

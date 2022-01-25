@@ -38,8 +38,6 @@ md_begin()
   literal_prefix_dollar_hex = true;
 }
 
-#define MOS65XX_FORCE_SIZE_SUFFIX 	':'
-#define MOS65XX_IMM_PREFIX 		'#'
 static void mos65xx_lex_expr(char **s, expressionS *exp)
 {
   char *suffix_delim;
@@ -92,9 +90,11 @@ static void mos65xx_lex_expr(char **s, expressionS *exp)
     char test = toupper(input_line_pointer[1]);
     switch(test)
     {
-      case 'B': X_md |= MOS65XX_SIZEOF_BYTE; break;
-      case 'W': X_md |= MOS65XX_SIZEOF_WORD; break;
-      case 'L': X_md |= MOS65XX_SIZEOF_LONG; break;
+      case MOS65XX_BYTE_SUFFIX: X_md |= MOS65XX_SIZEOF_BYTE; break;
+      case MOS65XX_WORD_SUFFIX: X_md |= MOS65XX_SIZEOF_WORD; break;
+      case MOS65XX_LONG_SUFFIX: X_md |= MOS65XX_SIZEOF_LONG; break;
+      case MOS65XX_RELOC_DP_SUFFIX: X_md |= (MOS65XX_SIZEOF_WORD | MOS65XX_RELOC_DP); break;
+      case MOS65XX_RELOC_BANK_SUFFIX: X_md |= (MOS65XX_SIZEOF_BYTE | MOS65XX_RELOC_BANK); break;
       default: as_fatal("Unrecognized size suffix"); break;
     }
     if(exp->X_op == O_register)
@@ -166,6 +166,8 @@ void parse_operand(char *start, struct mos65xx_operand *op)
     else if(id == MOS65XX_IND_CLOSE)
     {
       /* Expect indirect Y or just indirect */
+      if(MOS65XX_IMM(op->lhs.X_md))
+        as_fatal("Unexpected immediate in Indirect operand");
       SKIP_SPACES(start);
       if(*start)
       {
@@ -190,6 +192,8 @@ void parse_operand(char *start, struct mos65xx_operand *op)
 
     if(op->lhs.X_op == O_register)
       as_fatal("Didn't expect register for first operand of Indirect Long");
+    else if(MOS65XX_IMM(op->lhs.X_md))
+      as_fatal("Didn't expect immediate for first operand of Indirect Long");
 
     SKIP_SPACES(start);
     if(*start++ != MOS65XX_IND_LNG_CLOSE)
@@ -376,45 +380,14 @@ emit_insn(int addrmode, uint8_t opcode_prefix, struct mos65xx_operand operand)
   char *frag;
   int32_t lhs_val = operand.lhs.X_add_number;
   int32_t rhs_val = operand.rhs.X_add_number;
-  int width1 = 0;
-  int width2 = 0;
-  switch(addrmode)
-  {
-    case MOS65XX_ADDRMODE_BLK:
-      width1 = MOS65XX_SIZEOF_BYTE;
-      width2 = MOS65XX_SIZEOF_BYTE;
-      break;
-    case MOS65XX_ADDRMODE_PGE:
-    case MOS65XX_ADDRMODE_IND_LNG:
-    case MOS65XX_ADDRMODE_IMM:
-    case MOS65XX_ADDRMODE_IND_IDY:
-    case MOS65XX_ADDRMODE_IND_IDX:
-    case MOS65XX_ADDRMODE_IND:
-    case MOS65XX_ADDRMODE_STK_IND_IDY:
-    case MOS65XX_ADDRMODE_IDX:
-    case MOS65XX_ADDRMODE_IND_LNG_IDY:
-    case MOS65XX_ADDRMODE_IDY:
-      width1 = MOS65XX_SIZEOF_BYTE;
-      break;
-    case MOS65XX_ADDRMODE_ABS:
-    case MOS65XX_ADDRMODE_ABS_IDY:
-    case MOS65XX_ADDRMODE_ABS_IDX:
-    case MOS65XX_ADDRMODE_ABS_IND:
-    case MOS65XX_ADDRMODE_ABS_IND_IDX:
-    case MOS65XX_ADDRMODE_ABS_IND_LNG:
-      width1 = MOS65XX_SIZEOF_WORD; 
-      break;
-    case MOS65XX_ADDRMODE_LNG:
-    case MOS65XX_ADDRMODE_ABS_LNG_IDX:
-      width1 = MOS65XX_SIZEOF_LONG;
-      break;
-  }
-  frag = frag_more(1 + width1 + width2);
+  struct mos65xx_arg_widths widths;
+  mos65xx_addrmode_widths(addrmode, &widths);
+  frag = frag_more(1 + widths.width1 + widths.width2);
   frag[0] = opcode_prefix;
-  if(width1 != 0)
-    md_number_to_chars(frag + 1, lhs_val, width1); 
-  if(width2 != 0)
-    md_number_to_chars(frag + 1 + width1, rhs_val, width2);
+  if(widths.width1 != 0)
+    md_number_to_chars(frag + 1, lhs_val, widths.width1); 
+  if(widths.width2 != 0)
+    md_number_to_chars(frag + 1 + widths.width1, rhs_val, widths.width2);
 }
 
 void

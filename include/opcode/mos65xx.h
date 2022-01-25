@@ -52,7 +52,8 @@
 #define MOS65XX_OPCLASS_STY 			16
 #define MOS65XX_OPCLASS_STZ 			17
 #define MOS65XX_OPCLASS_TB 			18
-#define MOS65XX_OPCLASS_MAX 			19
+#define MOS65XX_OPCLASS_BRANCHLONG 		19
+#define MOS65XX_OPCLASS_MAX 			20
 
 /*
  * Do not take changing these bases lightly.
@@ -92,11 +93,13 @@
 #define MOS65XX_BVC_BASE 			0x44
 #define MOS65XX_BVS_BASE 			0x64
 #define MOS65XX_BRA_BASE 			0x74
-#define MOS65XX_BRL_BASE 			0x76
 #define MOS65XX_BCC_BASE 			0x84
 #define MOS65XX_BCS_BASE 			0xa4
 #define MOS65XX_BNE_BASE 			0xc4
 #define MOS65XX_BEQ_BASE 			0xe4
+
+/* Branch long */
+#define MOS65XX_BRL_BASE 			0x76
 
 /* IDX instructions */
 #define MOS65XX_BIT_BASE 			0x20
@@ -210,7 +213,7 @@
 #define MOS65XX_BPL_CLASS 	MOS65XX_OPCLASS_BRANCH
 #define MOS65XX_BRA_CLASS 	MOS65XX_OPCLASS_BRANCH
 #define MOS65XX_BRK_CLASS 	MOS65XX_OPCLASS_IMPLIED
-#define MOS65XX_BRL_CLASS 	MOS65XX_OPCLASS_BRANCH
+#define MOS65XX_BRL_CLASS 	MOS65XX_OPCLASS_BRANCHLONG
 #define MOS65XX_BVC_CLASS 	MOS65XX_OPCLASS_BRANCH
 #define MOS65XX_BVS_CLASS 	MOS65XX_OPCLASS_BRANCH
 #define MOS65XX_CLC_CLASS 	MOS65XX_OPCLASS_IMPLIED
@@ -290,14 +293,32 @@
 #define MOS65XX_XBA_CLASS 	MOS65XX_OPCLASS_IMPLIED
 #define MOS65XX_XCE_CLASS 	MOS65XX_OPCLASS_IMPLIED
 
-struct mos65xx_op {
+#define MOS65XX_SIZEOF_BYTE 	1
+#define MOS65XX_SIZEOF_WORD 	2
+#define MOS65XX_SIZEOF_LONG 	3
+
+#define MOS65XX_FORCE_SIZE_SUFFIX 	':'
+#define MOS65XX_IMM_PREFIX 		'#'
+#define MOS65XX_BYTE_SUFFIX 		'B'
+#define MOS65XX_WORD_SUFFIX 		'W'
+#define MOS65XX_LONG_SUFFIX 		'L'
+
+struct mos65xx_op 
+{
   const char *name;
   uint32_t modeflags;
   int base;
   int opclass;
 };
 
+struct mos65xx_arg_widths
+{
+  int width1;
+  int width2;
+};
+
 extern const uint8_t mos65xx_addrmode_addends[MOS65XX_ADDRMODE_MAX];
 struct mos65xx_op *mos65xx_opcode_lookup(const char *nmemonic, struct mos65xx_op *out_opcode);
+void mos65xx_addrmode_widths(int addrmode, struct mos65xx_arg_widths *widths);
 
 #endif
