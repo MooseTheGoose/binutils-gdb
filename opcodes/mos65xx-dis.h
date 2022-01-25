@@ -10,7 +10,7 @@ struct mos65816_disas
   uint8_t pcrel_szof;
 };
 #define MOS65XX_DIS_AND_PCREL(name, addrmode, pcrel) \
-{ name, MOS65XX_ADDRMODE_ ## addrmode , pcrel
+{ name, MOS65XX_ADDRMODE_ ## addrmode , pcrel }
 
 #define MOS65816_DIS(name, addrmode) MOS65XX_DIS_AND_PCREL(name, addrmode, 0)
 
