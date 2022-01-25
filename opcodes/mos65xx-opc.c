@@ -126,6 +126,16 @@ static uint32_t mos65xx_opclass_modeflags[MOS65XX_OPCLASS_MAX] =
   MOS65XX_BRANCHLONG_MODEFLAGS 
 };
 
+static uint8_t mos65xx_opclass_pcrel_szofs[MOS65XX_OPCLASS_MAX] =
+{
+  /* ALUMEM, CPXY, BITOPS, BRANCH, IDX, IDY, IMPLIED, JUMP */
+  0, 0, 0, MOS65XX_SIZEOF_BYTE, 0, 0, 0, 0, 
+  /* JSR, BLK, PEA, PEI, PER, IMM, STA, STX */
+  0, 0, 0, 0, MOS65XX_SIZEOF_WORD, 0, 0, 0,
+  /* STY, STZ, TB, BRANCHLONG */
+  0, 0, 0, MOS65XX_SIZEOF_WORD
+};
+
 /*
  *  The assembler can define these in any
  *  way most convenient, but these do have
@@ -146,9 +156,7 @@ mos65xx_addrmode_addends[MOS65XX_ADDRMODE_MAX] =
   /* IDY, ACC, BLK, IMPLIED */
   0x14, 0x8, 0x0, 0x0, 
   /* ABS_IND, ABS_IND_IDX, ABS_IND_LNG */
-  0x10, 0x12, 0x1e,
-  /* PCREL, PCREL16 */
-  0x0, 0x0
+  0x10, 0x12, 0x1e
 }; 
 
 static int
@@ -172,6 +180,7 @@ struct mos65xx_op
   {
     fill_in->name = id->name;
     fill_in->modeflags = mos65xx_opclass_modeflags[id->opclass];
+    fill_in->pcrel_szof = mos65xx_opclass_pcrel_szofs[id->opclass];
     fill_in->opclass = id->opclass;
     fill_in->base = id->base;
   }

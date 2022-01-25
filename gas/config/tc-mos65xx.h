@@ -15,7 +15,6 @@ extern const char EXP_CHARS[];
 extern const char FLT_CHARS[];
 
 #define LITERAL_PREFIXPERCENT_BIN
-#define LITERAL_PREFIXDOLLAR_HEX
 #define LEX_DOLLAR 0
 
 extern struct option md_longopts[];
@@ -67,8 +66,8 @@ void md_show_usage(FILE *f);
 #define MOS65XX_RELOC_BANK 		16
 #define MOS65XX_RELOC_MASK 		0x18
 #define MOS65XX_RELOC(X_md) 		((X_md) & MOS65XX_RELOC_MASK)
-#define MOS65XX_RELOC_DP_SUFFIX 	'<'
-#define MOS65XX_RELOC_BANK_SUFFIX 	'>'
+#define MOS65XX_RELOC_DP_SUFFIX 	'>'
+#define MOS65XX_RELOC_BANK_SUFFIX 	'K'
 
 #define MOS65XX_REG_A 			1
 #define MOS65XX_REG_X 			2

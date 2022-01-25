@@ -371,6 +371,15 @@ generate_opcode_prefix(int addrmode, struct mos65xx_op opcode)
     else if(addrmode == MOS65XX_ADDRMODE_ABS_IDX)
       opcode_prefix = 0x9e;
   }
+  else if(opcode.opclass == MOS65XX_OPCLASS_JUMP)
+  {
+    opcode_prefix += (opcode_prefix - 0x4c) * 0x8;
+  }
+  else if(opcode.opclass == MOS65XX_OPCLASS_JSR)
+  {
+    if(addrmode == MOS65XX_ADDRMODE_ABS_IND_IDX)
+      opcode_prefix = 0xfc;
+  }
   return opcode_prefix & 0xff;
 }
 
@@ -436,7 +445,7 @@ md_assemble(char *line)
     printf("mode: %x\n", MOS65XX_MODEFLAG(addrmode));
     opcode_prefix = generate_opcode_prefix(addrmode, opcode);
 
-    if(opcode.modeflags & (MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_PCREL) | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_PCREL16)))
+    if(opcode.pcrel_szof > 0)
       as_fatal("PC Relative addressing is just so much nope right now...");
     emit_insn(addrmode, opcode_prefix, operand);
   }
