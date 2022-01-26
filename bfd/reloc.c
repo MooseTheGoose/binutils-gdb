@@ -2381,6 +2381,20 @@ ENUMDOC
 COMMENT
 
 ENUM
+  BFD_RELOC_MOS65XX_DPAGE
+ENUMDOC
+  MOS65816 relocation for getting direct page # of label (unsigned, top 16)
+ENUM
+  BFD_RELOC_MOS65XX_BANK
+ENUMDOC
+  MOS65816 relocation for getting bank # of label (unsigned, top 8)
+ENUM
+  BFD_RELOC_MOS65XX_UOFS8
+ENUMDOC
+  MOS65XX relocation for page and stack relative offset (unsigned, bottom 8)
+COMMENT
+
+ENUM
   BFD_RELOC_FT32_10
 ENUMX
   BFD_RELOC_FT32_20

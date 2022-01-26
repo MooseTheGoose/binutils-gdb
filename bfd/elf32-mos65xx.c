@@ -14,20 +14,150 @@ struct mos65xx_reloc_map_entry {
 
 static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
 {
-  { BFD_RELOC_NONE,
-    HOWTO(R_MOS65XX_NONE,
-  	0,
-  	3,
-  	0,
-  	false,
-  	0,
-  	complain_overflow_dont,
-  	bfd_elf_generic_reloc,
-  	"R_MOS65XX_NONE",
-  	false,
-  	0,
-  	0,
-  	false) }
+  { 
+    BFD_RELOC_NONE,
+    HOWTO(R_MOS65XX_NONE, /* Type */
+  	0, /* rightshift */
+  	3, /* size (0 = byte, 1 = short, 3 = <none>, 5 = long) */
+  	0, /* bitsize */
+  	false, /* pc_relative */
+  	0, /* bitpos */
+  	complain_overflow_dont, /* complain_on_overflow */
+  	bfd_elf_generic_reloc, /* special_function */
+  	"R_MOS65XX_NONE", /* name */
+  	false, /* partial_inplace */
+  	0, /* src_mask */
+  	0, /* dst_mask */
+  	false)  /* pcrel_offset */
+  },
+  { 
+    BFD_RELOC_8,
+    HOWTO(R_MOS65XX_8,
+ 	0,
+ 	1,
+ 	8,
+ 	false,
+ 	0,
+ 	complain_overflow_bitfield,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_8",
+ 	false,
+ 	0,
+ 	0xff,
+ 	false)
+  },
+  {
+    BFD_RELOC_16,
+    HOWTO(R_MOS65XX_16,
+ 	0,
+ 	2,
+ 	16,
+ 	false,
+ 	0,
+ 	complain_overflow_bitfield,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_16",
+ 	false,
+ 	0,
+ 	0xffff,
+ 	false)
+  },
+  {
+    BFD_RELOC_24,
+    HOWTO(R_MOS65XX_24,
+ 	0,
+ 	5,
+ 	24,
+ 	false,
+ 	0,
+ 	complain_overflow_bitfield,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_24",
+ 	false,
+ 	0,
+ 	0xffffff,
+ 	false)
+  },
+  {
+    BFD_RELOC_8_PCREL,
+    HOWTO(R_MOS65XX_8_PCREL,
+ 	0,
+ 	0,
+ 	8,
+ 	true,
+ 	0,
+ 	complain_overflow_signed,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_8_PCREL",
+ 	false,
+ 	0,
+ 	0xff,
+ 	true)
+  },
+  {
+    BFD_RELOC_16_PCREL,
+    HOWTO(R_MOS65XX_16_PCREL,
+ 	0,
+ 	1,
+ 	16,
+ 	true,
+ 	0,
+ 	complain_overflow_signed,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_16_PCREL",
+ 	false,
+ 	0,
+ 	0xffff,
+ 	true)
+  },
+  {
+    BFD_RELOC_MOS65XX_DPAGE,
+    HOWTO(R_MOS65XX_DPAGE,
+ 	8,
+ 	1,
+ 	16,
+ 	false,
+ 	0,
+ 	complain_overflow_bitfield,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_DPAGE",
+ 	false,
+ 	0,
+ 	0xffff,
+ 	false)
+  },
+  {
+    BFD_RELOC_MOS65XX_BANK,
+    HOWTO(R_MOS65XX_BANK,
+ 	16,
+ 	0,
+ 	8,
+ 	false,
+ 	0,
+ 	complain_overflow_bitfield,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_BANK",
+ 	false,
+ 	0,
+ 	0xff,
+ 	false)
+  },
+  {
+    BFD_RELOC_MOS65XX_UOFS8,
+    HOWTO(R_MOS65XX_UOFS8,
+ 	0,
+ 	0,
+ 	8,
+ 	false,
+ 	0,
+ 	complain_overflow_unsigned,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_UOFS8",
+ 	false,
+ 	0,
+ 	0xff,
+ 	false)
+  }
 };
 
 static reloc_howto_type *

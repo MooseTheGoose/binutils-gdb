@@ -145,7 +145,7 @@ void parse_operand(char *start, struct mos65xx_operand *op)
       mos65xx_lex_expr(&start, &op->rhs);
       if(MOS65XX_IMM(op->lhs.X_md) && (op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_S))
         as_fatal("Expected S register after immediate for Stack Relative Indexing");
-      else if(op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_X)
+      else if(!MOS65XX_IMM(op->lhs.X_md) && (op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_X))
         as_fatal("Expected X register after address for Indirect Indexing");
       SKIP_SPACES(start);
       if(*start++ != MOS65XX_IND_CLOSE)
@@ -316,11 +316,11 @@ coerce_operand_to_addrmode(int operand, uint32_t modeflags, int szof)
     if(operand == data->operand)
     {
       uint8_t preferred_mode = (szof == MOS65XX_SIZEOF_BYTE) ? data->mode_8 : ((szof == MOS65XX_SIZEOF_WORD) ? data->mode_16 : data->mode_24);
-      if(preferred_mode != MOS65XX_ADDRMODE_INVALID && (modeflags & MOS65XX_MODEFLAG(preferred_mode)))
+      if(modeflags & MOS65XX_MODEFLAG(preferred_mode))
         mode = preferred_mode;
-      else if(data->mode_8 != MOS65XX_ADDRMODE_INVALID && (modeflags & MOS65XX_MODEFLAG(data->mode_8)))
+      else if(modeflags & MOS65XX_MODEFLAG(data->mode_8))
         mode = data->mode_8;
-      else if(data->mode_16 != MOS65XX_ADDRMODE_INVALID && (modeflags & MOS65XX_MODEFLAG(data->mode_16)))
+      else if(modeflags & MOS65XX_MODEFLAG(data->mode_16))
         mode = data->mode_16;
       else
         mode = data->mode_24;
@@ -331,18 +331,27 @@ coerce_operand_to_addrmode(int operand, uint32_t modeflags, int szof)
 }
 
 static uint8_t
-generate_opcode_prefix(int addrmode, struct mos65xx_op opcode)
+generate_opcode_prefix(int *inout_addrmode, struct mos65xx_operand *operand, struct mos65xx_op opcode)
 {
   int opcode_prefix;
-  if(addrmode == MOS65XX_ADDRMODE_INVALID || (MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)
+  int addrmode = *inout_addrmode;
+  if((MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)
   {
     if(addrmode == MOS65XX_ADDRMODE_IMPLIED)
     {
-      if(opcode.opclass == MOS65XX_OPCLASS_BITOPS)
+      if(MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_ACC) & opcode.modeflags)
         addrmode = MOS65XX_ADDRMODE_ACC;
+      else if(MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IMM) & opcode.modeflags)
+      {
+        addrmode = MOS65XX_ADDRMODE_IMM;
+        operand->lhs.X_op = O_constant;
+        operand->lhs.X_add_number = 0;
+        operand->lhs.X_md = (MOS65XX_SIZEOF_BYTE | MOS65XX_IMMFLAG);
+      } 
     }
     if((MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)
       as_fatal("Invalid addressing mode for instruction");
+    *inout_addrmode = addrmode;
   }
 
   /* Prepare yourself for some magic... */ 
@@ -443,7 +452,7 @@ md_assemble(char *line)
 
     printf("modeflags: %x\n", opcode.modeflags);
     printf("mode: %x\n", MOS65XX_MODEFLAG(addrmode));
-    opcode_prefix = generate_opcode_prefix(addrmode, opcode);
+    opcode_prefix = generate_opcode_prefix(&addrmode, &operand, opcode);
 
     if(opcode.pcrel_szof > 0)
       as_fatal("PC Relative addressing is just so much nope right now...");

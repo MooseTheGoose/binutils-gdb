@@ -19,5 +19,9 @@ static const bfd_arch_info_type arch_info_struct[] =
 };
 */
 
+/*
 const bfd_arch_info_type bfd_mos65xx_arch = 
   N(bfd_mach_6502, "6502", 16, true, 0);
+*/
+const bfd_arch_info_type bfd_mos65xx_arch =
+  N(bfd_mach_65816, "65816", 24, true, 0);

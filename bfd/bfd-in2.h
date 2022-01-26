@@ -1477,7 +1477,8 @@ enum bfd_architecture
 #define bfd_mach_mcf_isa_c_nodiv_emac  31
   bfd_arch_vax,       /* DEC Vax.  */
   bfd_arch_mos65xx,   /* MOS65XX Family */
-#define bfd_mach_6502                  1
+#define bfd_mach_6502          1
+#define bfd_mach_65816         2
   bfd_arch_or1k,      /* OpenRISC 1000.  */
 #define bfd_mach_or1k          1
 #define bfd_mach_or1knd        2
@@ -2672,6 +2673,16 @@ to compensate for the borrow when the low bits are added.  */
 
 /* Moxie ELF relocations.  */
   BFD_RELOC_MOXIE_10_PCREL,
+
+
+/* MOS65816 relocation for getting direct page # of label (unsigned, top 16)  */
+  BFD_RELOC_MOS65XX_DPAGE,
+
+/* MOS65816 relocation for getting bank # of label (unsigned, top 8)  */
+  BFD_RELOC_MOS65XX_BANK,
+
+/* MOS65XX relocation for page and stack relative offset (unsigned, bottom 8)  */
+  BFD_RELOC_MOS65XX_UOFS8,
 
 
 /* FT32 ELF relocations.  */
