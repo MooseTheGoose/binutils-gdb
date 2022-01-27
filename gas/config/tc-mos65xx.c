@@ -143,10 +143,10 @@ void parse_operand(char *start, struct mos65xx_operand *op)
       op->typ = MOS65XX_OPERAND_IND_IDX;
       SKIP_SPACES(start);
       mos65xx_lex_expr(&start, &op->rhs);
-      if(MOS65XX_IMM(op->lhs.X_md) && (op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_S))
-        as_fatal("Expected S register after immediate for Stack Relative Indexing");
-      else if(!MOS65XX_IMM(op->lhs.X_md) && (op->rhs.X_op != O_register || op->rhs.X_add_number != MOS65XX_REG_X))
-        as_fatal("Expected X register after address for Indirect Indexing");
+      if(MOS65XX_IMM(op->lhs.X_md))
+        as_fatal("Unexpected immediate in Indirect Indexing");
+      else if(op->rhs.X_op != O_register || (op->rhs.X_add_number != MOS65XX_REG_S && op->rhs.X_add_number != MOS65XX_REG_X))
+        as_fatal("Expected S,X register after address for Indirect Indexing");
       SKIP_SPACES(start);
       if(*start++ != MOS65XX_IND_CLOSE)
         as_fatal("Expected ')' in Indexing");
@@ -260,7 +260,8 @@ void parse_operand(char *start, struct mos65xx_operand *op)
 
 #define SKIP_SPACES(s) while(*s && isspace(*s)) s++
 
-static void print_operand(int operand)
+ATTRIBUTE_UNUSED static void 
+print_operand(int operand)
 {
   printf("Operand: ");
   switch(operand)
@@ -272,7 +273,7 @@ static void print_operand(int operand)
     case MOS65XX_OPERAND_IMM: printf("#imm\n"); break;
     case MOS65XX_OPERAND_IND_IDY: printf("(addr),Y\n"); break;
     case MOS65XX_OPERAND_IND: printf("(addr)\n"); break;
-    case MOS65XX_OPERAND_STK_IND_IDY: printf("(#imm,S),Y\n"); break;
+    case MOS65XX_OPERAND_STK_IND_IDY: printf("(ofs,S),Y\n"); break;
     case MOS65XX_OPERAND_IDX: printf("addr,X\n"); break;
     case MOS65XX_OPERAND_IND_LNG: printf("[addr]\n"); break;
     case MOS65XX_OPERAND_IDY: printf("addr,Y\n"); break;
@@ -393,7 +394,7 @@ generate_opcode_prefix(int *inout_addrmode, struct mos65xx_operand *operand, str
 }
 
 static void
-emit_insn(int addrmode, uint8_t opcode_prefix, struct mos65xx_operand operand)
+emit_insn(int addrmode, uint8_t opcode_prefix, struct mos65xx_op opcode, struct mos65xx_operand operand)
 {
   char *frag;
   int32_t lhs_val = operand.lhs.X_add_number;
@@ -402,9 +403,20 @@ emit_insn(int addrmode, uint8_t opcode_prefix, struct mos65xx_operand operand)
   mos65xx_addrmode_widths(addrmode, &widths);
   frag = frag_more(1 + widths.width1 + widths.width2);
   frag[0] = opcode_prefix;
-  if(widths.width1 != 0)
+
+/*
+  if((widths.width1 > 0 && operand.lhs.X_op == O_symbol) || (widths.width2 > 0 && operand.rhs.X_op == O_symbol))
+    as_fatal("Ummm... We don't support symbols yet. *blush*");
+*/
+
+  if(opcode.pcrel_szof > 0)
+  {
+    fix_new_exp(frag_now, (frag+1) - frag_now->fr_literal, opcode.pcrel_szof, &operand.lhs, true,
+    	(opcode.pcrel_szof == MOS65XX_SIZEOF_BYTE) ? BFD_RELOC_8_PCREL : BFD_RELOC_16_PCREL);
+  }
+  else if(widths.width1 != 0)
     md_number_to_chars(frag + 1, lhs_val, widths.width1); 
-  if(widths.width2 != 0)
+  else if(widths.width2 != 0)
     md_number_to_chars(frag + 1 + widths.width1, rhs_val, widths.width2);
 }
 
@@ -415,7 +427,7 @@ md_assemble(char *line)
   char *save_lineptr = input_line_pointer;
   struct mos65xx_op opcode;
 
-  printf("%s\n", line);
+  /* printf("%s\n", line); */
 
   /* Find the nmemonic */
   token = strchr(line, ' ');
@@ -427,37 +439,21 @@ md_assemble(char *line)
     line = token;
     *token = ' ';
   }
-  
-  if(opcode.modeflags & MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IMPLIED))
-  {
-    if(opcode.base == MOS65XX_WDM_BASE)
-    {
-      char *frag = frag_more(2);
-      frag[0] = MOS65XX_WDM_BASE;
-      frag[1] = 0;
-    }
-    else
-      *(char *)frag_more(1) = opcode.base;
-  }
   else
-  {
-    int opcode_prefix;
-    struct mos65xx_operand operand;
-    parse_operand(line, &operand);
-    if(operand.rhs.X_op == O_symbol || operand.lhs.X_op == O_symbol)
-      as_fatal("Ummm... We don't support symbols yet. *blush*");
-    print_operand(operand.typ);
-    printf("Preferred Size: %d\n", MOS65XX_SIZEOF(operand.lhs.X_md));
-    int addrmode = coerce_operand_to_addrmode(operand.typ, opcode.modeflags, MOS65XX_SIZEOF(operand.lhs.X_md));
+    line += strlen(line);
+  
+  int opcode_prefix;
+  struct mos65xx_operand operand;
+  parse_operand(line, &operand);
+  /* print_operand(operand.typ); */
+  /* printf("Preferred Size: %d\n", MOS65XX_SIZEOF(operand.lhs.X_md)); */
+  int addrmode = coerce_operand_to_addrmode(operand.typ, opcode.modeflags, MOS65XX_SIZEOF(operand.lhs.X_md));
 
-    printf("modeflags: %x\n", opcode.modeflags);
-    printf("mode: %x\n", MOS65XX_MODEFLAG(addrmode));
-    opcode_prefix = generate_opcode_prefix(&addrmode, &operand, opcode);
+  /* printf("modeflags: %x\n", opcode.modeflags); */
+  /* printf("mode: %x\n", MOS65XX_MODEFLAG(addrmode)); */
+  opcode_prefix = generate_opcode_prefix(&addrmode, &operand, opcode);
 
-    if(opcode.pcrel_szof > 0)
-      as_fatal("PC Relative addressing is just so much nope right now...");
-    emit_insn(addrmode, opcode_prefix, operand);
-  }
+  emit_insn(addrmode, opcode_prefix, opcode, operand);
 
   input_line_pointer = save_lineptr; 
 }
@@ -465,8 +461,51 @@ md_assemble(char *line)
 void
 md_apply_fix(fixS * fixP ATTRIBUTE_UNUSED, valueT* valP ATTRIBUTE_UNUSED, segT seg ATTRIBUTE_UNUSED)
 {
-  printf("Me? Do a fixup? Whaaaaaaaaaa\n");
-  seg = (segT)((uintptr_t)fixP + valP);
+  long val = *valP;
+  char *rel = fixP->fx_where + fixP->fx_frag->fr_literal;
+
+  if(fixP->fx_addsy == NULL)
+    fixP->fx_done = 1;
+  if(fixP->fx_pcrel)
+  {
+    segT fix_seg = S_GET_SEGMENT(fixP->fx_addsy);
+    if(fix_seg == seg || fix_seg == absolute_section)
+    {
+      val += S_GET_VALUE(fixP->fx_addsy);
+      fixP->fx_done = 1;
+    }
+  }
+  switch(fixP->fx_r_type)
+  {
+    case BFD_RELOC_8_PCREL:
+    case BFD_RELOC_16_PCREL:
+      fixP->fx_no_overflow = 0;
+      break;
+    default:
+      fixP->fx_no_overflow = 1;
+      break;
+  }
+
+  switch(fixP->fx_r_type)
+  {
+    case BFD_RELOC_8_PCREL:
+      if(fixP->fx_done && (val < -0x80 || val >= 0x80))
+        as_bad_where(fixP->fx_file, fixP->fx_line, "8-bit signed offset out of range!");
+      *rel++ = val & 0xff;
+      break;
+    case BFD_RELOC_16_PCREL:
+      if(fixP->fx_done && (val < -0x8000 || val >= 0x8000))
+        as_bad_where(fixP->fx_file, fixP->fx_line, "16-bit signed offset out of range!");
+      *rel++ = val & 0xff;
+      *rel++ = val >> 8 & 0xff;
+      break;
+    case BFD_RELOC_16:
+      *rel++ = val & 0xff;
+      *rel++ = val >> 8 & 0xff;
+      break;
+    default:
+      break;
+  }
 }
 
 const char *
@@ -478,7 +517,7 @@ md_atof(int type, char *litP, int *sizeP)
 long
 md_pcrel_from(fixS * fixp)
 {
-  return fixp->fx_where + fixp->fx_frag->fr_address;
+  return fixp->fx_where + fixp->fx_frag->fr_address + fixp->fx_size;
 }
 
 const pseudo_typeS md_pseudo_table[] =

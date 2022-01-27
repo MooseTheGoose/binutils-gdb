@@ -403,7 +403,7 @@ print_insn(bfd_vma vaddr, struct disassemble_info *info,
       printf(" (%s)", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_STK_IND_IDY:
-      printf(" (#%s,S),Y", arg1.arg);
+      printf(" (%s,S),Y", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_IDY:
     case MOS65XX_ADDRMODE_ABS_IDY:
