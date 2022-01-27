@@ -3,6 +3,7 @@
 #include "disassemble.h"
 #include "mos65xx-dis.h"
 #include <stdio.h>
+#include <stdarg.h>
 
 static struct mos65816_disas
 default_disas[256] =
@@ -314,12 +315,8 @@ mos65xx_dis_read_arg(struct mos65xx_arg_str *arg, bfd_vma vaddr,
       val += (vaddr + width);
     }
     int snlen = 0; 
-    if(width == MOS65XX_SIZEOF_BYTE)
-      snlen = snprintf(printstr, printsz, "$%02X", val);
-    else if(width == MOS65XX_SIZEOF_WORD)
-      snlen = snprintf(printstr, printsz, "$%04X", val);
-    else
-      snlen = snprintf(printstr, printsz, "$%06X", val);
+    val &= (1 << (read_width * 8)) - 1;
+    snlen = snprintf(printstr, printsz, "$%X", val);
     if(snlen >= 0 && snlen < printsz)
     {
       printstr += snlen;
@@ -336,6 +333,29 @@ mos65xx_dis_read_arg(struct mos65xx_arg_str *arg, bfd_vma vaddr,
   return width;
 }
 
+static void
+mos65xx_dis_write(struct mos65xx_dis_writer *wrtr, const char *fmt, ...)
+{
+  va_list args;
+  va_start(args, fmt);
+  wrtr->nwritten += vprintf(fmt, args);
+  va_end(args);
+}
+
+static void
+mos65xx_dis_write_final(struct mos65xx_dis_writer *wrtr)
+{
+  char space_buffer[MOS65XX_DIS_LEN + 1];
+  int len = MOS65XX_DIS_LEN;
+  int i; 
+  if(wrtr->nwritten > 0)
+    len -= wrtr->nwritten;
+  for(i = 0; i < len; i++)
+    space_buffer[i] = ' ';
+  space_buffer[i] = 0;
+  printf("%s", space_buffer); 
+}
+
 static int 
 print_insn(bfd_vma vaddr, struct disassemble_info *info, 
 		struct mos65816_disas *op_disas)
@@ -344,6 +364,7 @@ print_insn(bfd_vma vaddr, struct disassemble_info *info,
   int addrmode = op_disas->addrmode;
   const char *nmemonic = op_disas->nmemonic;
   int pcrel_width = op_disas->pcrel_szof;
+  struct mos65xx_dis_writer wrtr = MOS65XX_DIS_WRITER_NEW;
 
   struct mos65xx_arg_widths widths;
   struct mos65xx_arg_str arg1, arg2;
@@ -370,58 +391,58 @@ print_insn(bfd_vma vaddr, struct disassemble_info *info,
     len += len2;
     vaddr += len2;
   }
-  printf("%s", nmemonic);
+  mos65xx_dis_write(&wrtr, "%s", nmemonic);
   switch(addrmode)
   {
     case MOS65XX_ADDRMODE_IND_IDX:
     case MOS65XX_ADDRMODE_ABS_IND_IDX:
-      printf(" (%s,X)", arg1.arg);
+      mos65xx_dis_write(&wrtr, " (%s,X)", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_STK_REL:
-      printf(" #%s,S", arg1.arg);
+      mos65xx_dis_write(&wrtr, " #%s,S", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_PGE:
     case MOS65XX_ADDRMODE_ABS:
     case MOS65XX_ADDRMODE_LNG:
-      printf(" %s", arg1.arg);
+      mos65xx_dis_write(&wrtr, " %s", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_IND_LNG:
     case MOS65XX_ADDRMODE_ABS_IND_LNG:
-      printf(" [%s]", arg1.arg);
+      mos65xx_dis_write(&wrtr, " [%s]", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_IND_LNG_IDY:
-      printf(" [%s],Y", arg1.arg);
+      mos65xx_dis_write(&wrtr, " [%s],Y", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_IMM:
-      printf(" #%s", arg1.arg);
+      mos65xx_dis_write(&wrtr, " #%s", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_IND_IDY:
-      printf(" (%s),Y", arg1.arg);
+      mos65xx_dis_write(&wrtr, " (%s),Y", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_IND:
     case MOS65XX_ADDRMODE_ABS_IND:
-      printf(" (%s)", arg1.arg);
+      mos65xx_dis_write(&wrtr, " (%s)", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_STK_IND_IDY:
-      printf(" (%s,S),Y", arg1.arg);
+      mos65xx_dis_write(&wrtr, " (%s,S),Y", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_IDY:
     case MOS65XX_ADDRMODE_ABS_IDY:
-      printf(" %s,Y", arg1.arg);
+      mos65xx_dis_write(&wrtr, " %s,Y", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_IDX:
     case MOS65XX_ADDRMODE_ABS_IDX:
     case MOS65XX_ADDRMODE_ABS_LNG_IDX:
-      printf(" %s,X", arg1.arg);
+      mos65xx_dis_write(&wrtr, " %s,X", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_ACC:
-      printf(" A");
+      mos65xx_dis_write(&wrtr, " A");
       break;
     case MOS65XX_ADDRMODE_BLK:
-      printf(" #%s,#%s", arg1.arg, arg2.arg);
+      mos65xx_dis_write(&wrtr, " #%s,#%s", arg1.arg, arg2.arg);
       break;
   }
-  printf(" ");
+  mos65xx_dis_write_final(&wrtr);
   return len;
 }
 

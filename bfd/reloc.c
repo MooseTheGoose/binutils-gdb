@@ -2389,9 +2389,13 @@ ENUM
 ENUMDOC
   MOS65816 relocation for getting bank # of label (unsigned, top 8)
 ENUM
-  BFD_RELOC_MOS65XX_UOFS8
+  BFD_RELOC_MOS65XX_STK_REL
 ENUMDOC
-  MOS65XX relocation for page and stack relative offset (unsigned, bottom 8)
+  MOS65816 relocation for getting stack relative offset (unsigned, 8 bits, checked)
+ENUM
+  BFD_RELOC_MOS65XX_ABS
+ENUMDOC
+  MOS65XX relocation for getting absolute address (bottom 16)
 COMMENT
 
 ENUM

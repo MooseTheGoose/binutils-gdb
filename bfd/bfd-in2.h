@@ -2681,8 +2681,11 @@ to compensate for the borrow when the low bits are added.  */
 /* MOS65816 relocation for getting bank # of label (unsigned, top 8)  */
   BFD_RELOC_MOS65XX_BANK,
 
-/* MOS65XX relocation for page and stack relative offset (unsigned, bottom 8)  */
-  BFD_RELOC_MOS65XX_UOFS8,
+/* MOS65816 relocation for getting stack relative offset (unsigned, 8 bits, checked)  */
+  BFD_RELOC_MOS65XX_STK_REL,
+
+/* MOS65XX relocation for getting absolute address (bottom 16)  */
+  BFD_RELOC_MOS65XX_ABS,
 
 
 /* FT32 ELF relocations.  */

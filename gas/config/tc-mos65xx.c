@@ -216,22 +216,7 @@ void parse_operand(char *start, struct mos65xx_operand *op)
     if(op->lhs.X_op == O_register && op->lhs.X_add_number != MOS65XX_REG_A)
       as_fatal("Only A register can be used as first argument");
     else if(MOS65XX_IMM(op->lhs.X_md))
-    {
       op->typ = MOS65XX_OPERAND_IMM;
-      SKIP_SPACES(start);
-      if(*start == MOS65XX_COMMA)
-      {
-        start++;
-        SKIP_SPACES(start);
-        mos65xx_lex_expr(&start, &op->rhs);
-        if(MOS65XX_IMM(op->rhs.X_md))
-          op->typ = MOS65XX_OPERAND_BLK;
-        else if(op->rhs.X_op == O_register  && op->rhs.X_add_number == MOS65XX_REG_S)
-          op->typ = MOS65XX_OPERAND_STK_REL;
-        else
-          as_fatal("Expected block or stack relative addressing mode");
-      } 
-    }
     else if(op->lhs.X_op != O_register)
     {
       op->typ = MOS65XX_OPERAND_PGE;
@@ -242,7 +227,11 @@ void parse_operand(char *start, struct mos65xx_operand *op)
         SKIP_SPACES(start);
         mos65xx_lex_expr(&start, &op->rhs);
         if(op->rhs.X_op != O_register)
-          as_fatal("Expected register for Absolute Indexing");
+        {
+          op->typ = MOS65XX_OPERAND_BLK;
+          if(MOS65XX_IMM(op->rhs.X_md))
+            as_fatal("Unexpected immediate in block mode operand");
+        }
         else if(op->rhs.X_add_number == MOS65XX_REG_A || op->rhs.X_add_number == MOS65XX_REG_S)
           as_fatal("Expected 'X' or 'Y' register for Absolute Indexing");
         else if(op->rhs.X_add_number == MOS65XX_REG_X)
@@ -393,31 +382,123 @@ generate_opcode_prefix(int *inout_addrmode, struct mos65xx_operand *operand, str
   return opcode_prefix & 0xff;
 }
 
+#define MOS65XX_RELOCFLAGS_PAGEOFS \
+  (MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_PGE) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IND_LNG) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IND_IDX) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IND_IDY) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IND) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IDX) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IND_LNG_IDY) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IDY)) 
+
+#define MOS65XX_RELOCFLAGS_ABS \
+  (MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_ABS) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_ABS_IDY) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_ABS_IDX) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_ABS_IND) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_ABS_IND_IDX) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_ABS_IND_LNG))
+
+#define MOS65XX_RELOCFLAGS_STK_REL \
+  (MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_STK_REL) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_STK_IND_IDY))
+
+static void
+emit_or_reloc_nonpcrel(char *frag, struct mos65xx_operand operand, 
+  struct mos65xx_arg_widths widths, int addrmode)
+{
+  int r_type = BFD_RELOC_8;
+  int modeflag = MOS65XX_MODEFLAG(addrmode);
+  expressionS *exps[2] = { &operand.lhs, &operand.rhs };
+  int widths_arr[2] = { widths.width1, widths.width2 };
+  long unsigned int i;
+
+  for(i = 0; i < sizeof(exps) / sizeof(exps[0]); i++)
+  {
+    expressionS *curr_exp = exps[i];
+    int width = widths_arr[i];
+    int X_md = curr_exp->X_md;
+    if(width <= 0)
+      continue;
+      
+    r_type = BFD_RELOC_NONE;
+    
+    switch(width)
+    {
+      case MOS65XX_SIZEOF_BYTE: r_type = BFD_RELOC_8; break;
+      case MOS65XX_SIZEOF_WORD: r_type = BFD_RELOC_16; break;
+      case MOS65XX_SIZEOF_LONG: r_type = BFD_RELOC_24; break;
+      default:
+        break;
+    }
+    
+    if(modeflag & MOS65XX_RELOCFLAGS_PAGEOFS)
+      r_type = BFD_RELOC_8_FFnn;
+    else if(modeflag & MOS65XX_RELOCFLAGS_ABS)
+      r_type = BFD_RELOC_MOS65XX_ABS;
+    else if(modeflag & MOS65XX_RELOCFLAGS_STK_REL)
+      r_type = BFD_RELOC_MOS65XX_STK_REL;  
+    
+    switch(MOS65XX_SIZEOF(X_md))
+    {
+      case MOS65XX_SIZEOF_BYTE: r_type = BFD_RELOC_8_FFnn; break;
+      case MOS65XX_SIZEOF_WORD: r_type = BFD_RELOC_MOS65XX_ABS; break;
+      case MOS65XX_SIZEOF_LONG: r_type = BFD_RELOC_24; break;
+      default:
+        break;
+    }
+    
+    switch(MOS65XX_RELOC(X_md))
+    {
+      case MOS65XX_RELOC_DP: r_type = BFD_RELOC_MOS65XX_DPAGE; break;
+      case MOS65XX_RELOC_BANK: r_type = BFD_RELOC_MOS65XX_BANK; break;
+      default:
+        break;
+    }
+    
+    if(curr_exp->X_op == O_constant)
+    {
+      curr_exp->X_add_number &= 0xffffff;
+      switch(r_type)
+      {
+        case BFD_RELOC_8_FFnn: curr_exp->X_add_number &= 0xff; break;
+        case BFD_RELOC_MOS65XX_ABS: curr_exp->X_add_number &= 0xffff; break;
+        case BFD_RELOC_MOS65XX_DPAGE: 
+          curr_exp->X_add_number = (curr_exp->X_add_number) >> 8; 
+          break;
+        case BFD_RELOC_MOS65XX_BANK:
+          curr_exp->X_add_number = (curr_exp->X_add_number) >> 16;
+          break;
+        default:
+          break;
+      }
+      if(curr_exp->X_add_number & ~((1 << 8 * width) - 1))
+        as_warn("Overflow in constant expression");
+      md_number_to_chars(frag, curr_exp->X_add_number, width);
+    }
+    else
+    {
+      fix_new_exp(frag_now, frag - frag_now->fr_literal, width, curr_exp, false, r_type);
+    }
+    frag += width;
+  }
+}
+
 static void
 emit_insn(int addrmode, uint8_t opcode_prefix, struct mos65xx_op opcode, struct mos65xx_operand operand)
 {
   char *frag;
-  int32_t lhs_val = operand.lhs.X_add_number;
-  int32_t rhs_val = operand.rhs.X_add_number;
   struct mos65xx_arg_widths widths;
   mos65xx_addrmode_widths(addrmode, &widths);
   frag = frag_more(1 + widths.width1 + widths.width2);
-  frag[0] = opcode_prefix;
-
-/*
-  if((widths.width1 > 0 && operand.lhs.X_op == O_symbol) || (widths.width2 > 0 && operand.rhs.X_op == O_symbol))
-    as_fatal("Ummm... We don't support symbols yet. *blush*");
-*/
+  *frag++ = opcode_prefix;
 
   if(opcode.pcrel_szof > 0)
-  {
-    fix_new_exp(frag_now, (frag+1) - frag_now->fr_literal, opcode.pcrel_szof, &operand.lhs, true,
+    fix_new_exp(frag_now, frag - frag_now->fr_literal, opcode.pcrel_szof, &operand.lhs, true,
     	(opcode.pcrel_szof == MOS65XX_SIZEOF_BYTE) ? BFD_RELOC_8_PCREL : BFD_RELOC_16_PCREL);
-  }
-  else if(widths.width1 != 0)
-    md_number_to_chars(frag + 1, lhs_val, widths.width1); 
-  else if(widths.width2 != 0)
-    md_number_to_chars(frag + 1 + widths.width1, rhs_val, widths.width2);
+  else
+    emit_or_reloc_nonpcrel(frag, operand, widths, addrmode);
 }
 
 void
@@ -499,9 +580,37 @@ md_apply_fix(fixS * fixP ATTRIBUTE_UNUSED, valueT* valP ATTRIBUTE_UNUSED, segT s
       *rel++ = val & 0xff;
       *rel++ = val >> 8 & 0xff;
       break;
+    case BFD_RELOC_8:
+      if(fixP->fx_done && (val < -0x100 || val >= 0x100))
+        as_warn_where(fixP->fx_file, fixP->fx_line, "8-bit relocation out of range");
+      *rel++ = val & 0xff; 
+      break;
     case BFD_RELOC_16:
+      if(fixP->fx_done && (val < -0x10000 || val >= 0x10000))
+        as_warn_where(fixP->fx_file, fixP->fx_line, "16-bit relocation out of range");
       *rel++ = val & 0xff;
       *rel++ = val >> 8 & 0xff;
+      break;
+    case BFD_RELOC_24:
+      if(fixP->fx_done && (val < -0x1000000 || val >= 0x1000000))
+        as_warn_where(fixP->fx_file, fixP->fx_line, "24-bit relocation out of range");
+      *rel++ = val & 0xff;
+      *rel++ = val >> 8 & 0xff;
+      *rel++ = val >> 16 & 0xff;
+      break;
+    case BFD_RELOC_8_FFnn:
+      *rel++ = val & 0xff;
+      break;
+    case BFD_RELOC_MOS65XX_DPAGE:
+      *rel++ = val >> 8 & 0xffff;
+      break;
+    case BFD_RELOC_MOS65XX_BANK:
+      *rel++ = val >> 16 & 0xff;
+      break; 
+    case BFD_RELOC_MOS65XX_STK_REL:
+      if(fixP->fx_done && (val < 0 || val >= 0x100))
+        as_warn_where(fixP->fx_file, fixP->fx_line, "Stack-relative offset out of range");
+      *rel++ = val & 0xff;
       break;
     default:
       break;

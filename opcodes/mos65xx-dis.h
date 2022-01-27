@@ -28,4 +28,11 @@ struct mos65xx_arg_str
   int pcrel_width;
 };
 
+#define MOS65XX_DIS_LEN 	31
+#define MOS65XX_DIS_WRITER_NEW 	{0}
+struct mos65xx_dis_writer
+{
+  int nwritten;
+};
+
 #endif

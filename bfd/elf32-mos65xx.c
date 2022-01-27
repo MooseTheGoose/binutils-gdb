@@ -18,7 +18,7 @@ static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
     BFD_RELOC_NONE,
     HOWTO(R_MOS65XX_NONE, /* Type */
   	0, /* rightshift */
-  	3, /* size (0 = byte, 1 = short, 3 = <none>, 5 = long) */
+  	3, /* size (0 = byte, 1 = short, 3 = <none>, 5 = mos65816 long) */
   	0, /* bitsize */
   	false, /* pc_relative */
   	0, /* bitpos */
@@ -118,7 +118,7 @@ static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
  	16,
  	false,
  	0,
- 	complain_overflow_bitfield,
+ 	complain_overflow_dont,
  	bfd_elf_generic_reloc,
  	"R_MOS65XX_DPAGE",
  	false,
@@ -134,7 +134,7 @@ static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
  	8,
  	false,
  	0,
- 	complain_overflow_bitfield,
+ 	complain_overflow_dont,
  	bfd_elf_generic_reloc,
  	"R_MOS65XX_BANK",
  	false,
@@ -143,8 +143,24 @@ static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
  	false)
   },
   {
-    BFD_RELOC_MOS65XX_UOFS8,
-    HOWTO(R_MOS65XX_UOFS8,
+    BFD_RELOC_8_FFnn,
+    HOWTO(R_MOS65XX_PAGEOFS,
+ 	0,
+ 	0,
+ 	8,
+ 	false,
+ 	0,
+ 	complain_overflow_dont,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_PAGEOFS",
+ 	false,
+ 	0,
+ 	0xff,
+ 	false)
+  },
+  {
+    BFD_RELOC_MOS65XX_STK_REL,
+    HOWTO(R_MOS65XX_STK_REL,
  	0,
  	0,
  	8,
@@ -152,7 +168,23 @@ static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
  	0,
  	complain_overflow_unsigned,
  	bfd_elf_generic_reloc,
- 	"R_MOS65XX_UOFS8",
+ 	"R_MOS65XX_STK_REL",
+ 	false,
+ 	0,
+ 	0xff,
+ 	false)
+  },
+  {
+    BFD_RELOC_MOS65XX_ABS,
+    HOWTO(R_MOS65XX_ABS,
+ 	0,
+ 	0,
+ 	16,
+ 	false,
+ 	0,
+ 	complain_overflow_dont,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_ABS",
  	false,
  	0,
  	0xff,
