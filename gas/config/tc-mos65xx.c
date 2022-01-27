@@ -459,22 +459,24 @@ emit_or_reloc_nonpcrel(char *frag, struct mos65xx_operand operand,
     
     if(curr_exp->X_op == O_constant)
     {
-      curr_exp->X_add_number &= 0xffffff;
       switch(r_type)
       {
         case BFD_RELOC_8_FFnn: curr_exp->X_add_number &= 0xff; break;
         case BFD_RELOC_MOS65XX_ABS: curr_exp->X_add_number &= 0xffff; break;
         case BFD_RELOC_MOS65XX_DPAGE: 
-          curr_exp->X_add_number = (curr_exp->X_add_number) >> 8; 
+          curr_exp->X_add_number = (curr_exp->X_add_number) >> 8 & 0xffff; 
           break;
         case BFD_RELOC_MOS65XX_BANK:
-          curr_exp->X_add_number = (curr_exp->X_add_number) >> 16;
+          curr_exp->X_add_number = (curr_exp->X_add_number) >> 16 & 0xff;
           break;
         default:
+        {
+          int bound = (1 << (8 * width));
+          if(curr_exp->X_add_number < -bound || curr_exp->X_add_number >= bound)
+            as_warn("Overflow in constant expression");
           break;
+        }
       }
-      if(curr_exp->X_add_number & ~((1 << 8 * width) - 1))
-        as_warn("Overflow in constant expression");
       md_number_to_chars(frag, curr_exp->X_add_number, width);
     }
     else

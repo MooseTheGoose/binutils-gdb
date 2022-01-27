@@ -439,7 +439,7 @@ print_insn(bfd_vma vaddr, struct disassemble_info *info,
       mos65xx_dis_write(&wrtr, " A");
       break;
     case MOS65XX_ADDRMODE_BLK:
-      mos65xx_dis_write(&wrtr, " #%s,#%s", arg1.arg, arg2.arg);
+      mos65xx_dis_write(&wrtr, " %s,%s", arg1.arg, arg2.arg);
       break;
   }
   mos65xx_dis_write_final(&wrtr);
