@@ -532,7 +532,7 @@ md_assemble(char *line)
   if(MOS65XX_SIZEOF(operand.lhs.X_md) == 0 && operand.lhs.X_op == O_constant)
   {
     default_width = MOS65XX_SIZEOF_LONG;
-    if(operand.lhs.X_add_number < 0x10000 && operand.lhs.X_add_number >= -0x800)
+    if(operand.lhs.X_add_number < 0x10000 && operand.lhs.X_add_number >= -0x8000)
     {
       if(operand.lhs.X_add_number < 0x100 && operand.lhs.X_add_number >= -0x80)
         default_width = MOS65XX_SIZEOF_BYTE;
