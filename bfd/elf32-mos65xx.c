@@ -34,7 +34,7 @@ static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
     BFD_RELOC_8,
     HOWTO(R_MOS65XX_8,
  	0,
- 	1,
+ 	0,
  	8,
  	false,
  	0,
@@ -50,7 +50,7 @@ static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
     BFD_RELOC_16,
     HOWTO(R_MOS65XX_16,
  	0,
- 	2,
+ 	1,
  	16,
  	false,
  	0,
@@ -178,7 +178,7 @@ static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
     BFD_RELOC_MOS65XX_ABS,
     HOWTO(R_MOS65XX_ABS,
  	0,
- 	0,
+ 	1,
  	16,
  	false,
  	0,
@@ -187,7 +187,7 @@ static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
  	"R_MOS65XX_ABS",
  	false,
  	0,
- 	0xff,
+ 	0xffff,
  	false)
   }
 };
@@ -218,7 +218,6 @@ mos65xx_elf_reloc_name_lookup(bfd *abfd ATTRIBUTE_UNUSED, const char *r_name)
   return NULL;
 }
 
-/*
 static reloc_howto_type *
 mos65xx_elf_rtype_to_howto(bfd *abfd, unsigned int r_type)
 {
@@ -232,7 +231,20 @@ mos65xx_elf_rtype_to_howto(bfd *abfd, unsigned int r_type)
 
   return NULL;
 }
-*/
+
+static bool
+mos65xx_info_to_howto_rela(bfd *abfd, arelent *cache_ptr, Elf_Internal_Rela *dst)
+{
+  unsigned int r_type = ELF32_R_TYPE(dst->r_info);
+  reloc_howto_type *howto = mos65xx_elf_rtype_to_howto(abfd, r_type);
+  if(howto != NULL)
+  {
+    cache_ptr->howto = howto;
+    return true;
+  }
+  bfd_set_error(bfd_error_bad_value);
+  return false;
+}
 
 #define TARGET_LITTLE_SYM		mos65xx_elf32_vec
 #define TARGET_LITTLE_NAME		"elf32-mos65xx"
@@ -240,8 +252,10 @@ mos65xx_elf_rtype_to_howto(bfd *abfd, unsigned int r_type)
 #define ELF_MACHINE_CODE		EM_MOS65XX
 #define ELF_MAXPAGESIZE			0x1
 
+#define elf_info_to_howto 		mos65xx_info_to_howto_rela
+#define elf_info_to_howto_rel 		mos65xx_info_to_howto_rela
+
 #define bfd_elf32_bfd_reloc_type_lookup 	mos65xx_elf_reloc_type_lookup
 #define bfd_elf32_bfd_reloc_name_lookup 	mos65xx_elf_reloc_name_lookup
-#define bfd_elf32_bfd_rtype_to_howto		mos65xx_elf_rtype_to_howto
 
 #include "elf32-target.h"

@@ -135,8 +135,8 @@ ALL_MACHINES = \
 	cpu-microblaze.lo \
 	cpu-mips.lo \
 	cpu-mmix.lo \
-	cpu-moxie.lo \
 	cpu-mos65xx.lo \
+	cpu-moxie.lo \
 	cpu-msp430.lo \
 	cpu-mt.lo \
 	cpu-nds32.lo \
@@ -221,6 +221,7 @@ ALL_MACHINES_CFILES = \
 	cpu-microblaze.c \
 	cpu-mips.c \
 	cpu-mmix.c \
+	cpu-mos65xx.c \
 	cpu-moxie.c \
 	cpu-msp430.c \
 	cpu-mt.c \
@@ -328,6 +329,7 @@ BFD32_BACKENDS = \
 	elf32-mep.lo \
 	elf32-metag.lo \
 	elf32-microblaze.lo \
+	elf32-mos65xx.lo \
 	elf32-moxie.lo \
 	elf32-msp430.lo \
 	elf32-mt.lo \
@@ -461,6 +463,7 @@ BFD32_BACKENDS_CFILES = \
 	elf32-mep.c \
 	elf32-metag.c \
 	elf32-microblaze.c \
+	elf32-mos65xx.c \
 	elf32-moxie.c \
 	elf32-msp430.c \
 	elf32-mt.c \
