@@ -537,7 +537,7 @@ md_assemble(char *line)
       if(operand.lhs.X_add_number < 0x100 && operand.lhs.X_add_number >= -0x80)
         default_width = MOS65XX_SIZEOF_BYTE;
       else
-        default_width = MOS65XX_SIZEOF_LONG;
+        default_width = MOS65XX_SIZEOF_WORD;
     }
   }
   int addrmode = coerce_operand_to_addrmode(operand.typ, opcode.modeflags, default_width);
