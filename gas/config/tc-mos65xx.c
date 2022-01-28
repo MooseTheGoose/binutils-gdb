@@ -305,7 +305,7 @@ coerce_operand_to_addrmode(int operand, uint32_t modeflags, int szof)
     const struct ambiguous_mode_data *data = ambiguous_modes + i;
     if(operand == data->operand)
     {
-      uint8_t preferred_mode = (szof == MOS65XX_SIZEOF_BYTE) ? data->mode_8 : ((szof == MOS65XX_SIZEOF_WORD) ? data->mode_16 : data->mode_24);
+      uint8_t preferred_mode = (szof == MOS65XX_SIZEOF_LONG) ? data->mode_24 : ((szof == MOS65XX_SIZEOF_WORD) ? data->mode_16 : data->mode_8);
       if(modeflags & MOS65XX_MODEFLAG(preferred_mode))
         mode = preferred_mode;
       else if(modeflags & MOS65XX_MODEFLAG(data->mode_8))
@@ -472,7 +472,7 @@ emit_or_reloc_nonpcrel(char *frag, struct mos65xx_operand operand,
         default:
         {
           int bound = (1 << (8 * width));
-          if(curr_exp->X_add_number < -bound || curr_exp->X_add_number >= bound)
+          if(curr_exp->X_add_number < -(bound >> 1) || curr_exp->X_add_number >= bound)
             as_warn("Overflow in constant expression");
           break;
         }
@@ -509,6 +509,7 @@ md_assemble(char *line)
   char *token;
   char *save_lineptr = input_line_pointer;
   struct mos65xx_op opcode;
+  int default_width = MOS65XX_SIZEOF_BYTE;
 
   /* printf("%s\n", line); */
 
@@ -528,14 +529,19 @@ md_assemble(char *line)
   int opcode_prefix;
   struct mos65xx_operand operand;
   parse_operand(line, &operand);
-  /* print_operand(operand.typ); */
-  /* printf("Preferred Size: %d\n", MOS65XX_SIZEOF(operand.lhs.X_md)); */
-  int addrmode = coerce_operand_to_addrmode(operand.typ, opcode.modeflags, MOS65XX_SIZEOF(operand.lhs.X_md));
-
-  /* printf("modeflags: %x\n", opcode.modeflags); */
-  /* printf("mode: %x\n", MOS65XX_MODEFLAG(addrmode)); */
+  if(MOS65XX_SIZEOF(operand.lhs.X_md) == 0 && operand.lhs.X_op == O_constant)
+  {
+    default_width = MOS65XX_SIZEOF_LONG;
+    if(operand.lhs.X_add_number < 0x10000 && operand.lhs.X_add_number >= -0x800)
+    {
+      if(operand.lhs.X_add_number < 0x100 && operand.lhs.X_add_number >= -0x80)
+        default_width = MOS65XX_SIZEOF_BYTE;
+      else
+        default_width = MOS65XX_SIZEOF_LONG;
+    }
+  }
+  int addrmode = coerce_operand_to_addrmode(operand.typ, opcode.modeflags, default_width);
   opcode_prefix = generate_opcode_prefix(&addrmode, &operand, opcode);
-
   emit_insn(addrmode, opcode_prefix, opcode, operand);
 
   input_line_pointer = save_lineptr; 
@@ -583,18 +589,18 @@ md_apply_fix(fixS * fixP ATTRIBUTE_UNUSED, valueT* valP ATTRIBUTE_UNUSED, segT s
       *rel++ = val >> 8 & 0xff;
       break;
     case BFD_RELOC_8:
-      if(fixP->fx_done && (val < -0x100 || val >= 0x100))
+      if(fixP->fx_done && (val < -0x80 || val >= 0x100))
         as_warn_where(fixP->fx_file, fixP->fx_line, "8-bit relocation out of range");
       *rel++ = val & 0xff; 
       break;
     case BFD_RELOC_16:
-      if(fixP->fx_done && (val < -0x10000 || val >= 0x10000))
+      if(fixP->fx_done && (val < -0x8000 || val >= 0x1000))
         as_warn_where(fixP->fx_file, fixP->fx_line, "16-bit relocation out of range");
       *rel++ = val & 0xff;
       *rel++ = val >> 8 & 0xff;
       break;
     case BFD_RELOC_24:
-      if(fixP->fx_done && (val < -0x1000000 || val >= 0x1000000))
+      if(fixP->fx_done && (val < -0x800000 || val >= 0x1000000))
         as_warn_where(fixP->fx_file, fixP->fx_line, "24-bit relocation out of range");
       *rel++ = val & 0xff;
       *rel++ = val >> 8 & 0xff;
