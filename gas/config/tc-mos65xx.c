@@ -41,17 +41,9 @@ md_begin()
 static void mos65xx_lex_expr(char **s, expressionS *exp)
 {
   char *suffix_delim;
-  char prefix;
   int X_md = 0;
 
   input_line_pointer = *s;
-  prefix = *input_line_pointer;
-  if(prefix == MOS65XX_IMM_PREFIX)
-  {
-    X_md |= MOS65XX_IMMFLAG;
-    input_line_pointer++;
-  }
-  
   suffix_delim = strchr(input_line_pointer, MOS65XX_FORCE_SIZE_SUFFIX);
   if(suffix_delim)
     *suffix_delim = 0;
@@ -102,9 +94,6 @@ static void mos65xx_lex_expr(char **s, expressionS *exp)
     input_line_pointer += 2;
   }
   *s = input_line_pointer;
-  if(X_md & MOS65XX_IMMFLAG)
-    if(exp->X_op == O_register)
-      as_fatal("Tried to make register an immediate");
   exp->X_md = X_md;
 }
 
@@ -114,6 +103,7 @@ static void mos65xx_lex_expr(char **s, expressionS *exp)
 #define MOS65XX_IND_LNG_OPEN 	'['
 #define MOS65XX_IND_LNG_CLOSE 	']'
 #define MOS65XX_COMMA 		','
+#define MOS65XX_IMM_PREFIX 	'#'
 static 
 void parse_operand(char *start, struct mos65xx_operand *op)
 {
@@ -143,9 +133,7 @@ void parse_operand(char *start, struct mos65xx_operand *op)
       op->typ = MOS65XX_OPERAND_IND_IDX;
       SKIP_SPACES(start);
       mos65xx_lex_expr(&start, &op->rhs);
-      if(MOS65XX_IMM(op->lhs.X_md))
-        as_fatal("Unexpected immediate in Indirect Indexing");
-      else if(op->rhs.X_op != O_register || (op->rhs.X_add_number != MOS65XX_REG_S && op->rhs.X_add_number != MOS65XX_REG_X))
+      if(op->rhs.X_op != O_register || (op->rhs.X_add_number != MOS65XX_REG_S && op->rhs.X_add_number != MOS65XX_REG_X))
         as_fatal("Expected S,X register after address for Indirect Indexing");
       SKIP_SPACES(start);
       if(*start++ != MOS65XX_IND_CLOSE)
@@ -166,8 +154,6 @@ void parse_operand(char *start, struct mos65xx_operand *op)
     else if(id == MOS65XX_IND_CLOSE)
     {
       /* Expect indirect Y or just indirect */
-      if(MOS65XX_IMM(op->lhs.X_md))
-        as_fatal("Unexpected immediate in Indirect operand");
       SKIP_SPACES(start);
       if(*start)
       {
@@ -192,8 +178,6 @@ void parse_operand(char *start, struct mos65xx_operand *op)
 
     if(op->lhs.X_op == O_register)
       as_fatal("Didn't expect register for first operand of Indirect Long");
-    else if(MOS65XX_IMM(op->lhs.X_md))
-      as_fatal("Didn't expect immediate for first operand of Indirect Long");
 
     SKIP_SPACES(start);
     if(*start++ != MOS65XX_IND_LNG_CLOSE)
@@ -209,14 +193,20 @@ void parse_operand(char *start, struct mos65xx_operand *op)
         as_fatal("Expected 'Y' register for Indirect Long Indexed");
     }
   }
+  else if(*start == MOS65XX_IMM_PREFIX)
+  {
+    op->typ = MOS65XX_OPERAND_IMM;
+    start++;
+    mos65xx_lex_expr(&start, &op->lhs);
+    if(op->lhs.X_op == O_register)
+      as_fatal("Can't make immediate out of register");
+  }
   else if(*start)
   {
     op->typ = MOS65XX_OPERAND_ACC;
     mos65xx_lex_expr(&start, &op->lhs);
     if(op->lhs.X_op == O_register && op->lhs.X_add_number != MOS65XX_REG_A)
       as_fatal("Only A register can be used as first argument");
-    else if(MOS65XX_IMM(op->lhs.X_md))
-      op->typ = MOS65XX_OPERAND_IMM;
     else if(op->lhs.X_op != O_register)
     {
       op->typ = MOS65XX_OPERAND_PGE;
@@ -227,11 +217,7 @@ void parse_operand(char *start, struct mos65xx_operand *op)
         SKIP_SPACES(start);
         mos65xx_lex_expr(&start, &op->rhs);
         if(op->rhs.X_op != O_register)
-        {
           op->typ = MOS65XX_OPERAND_BLK;
-          if(MOS65XX_IMM(op->rhs.X_md))
-            as_fatal("Unexpected immediate in block mode operand");
-        }
         else if(op->rhs.X_add_number == MOS65XX_REG_A || op->rhs.X_add_number == MOS65XX_REG_S)
           as_fatal("Expected 'X' or 'Y' register for Absolute Indexing");
         else if(op->rhs.X_add_number == MOS65XX_REG_X)
@@ -336,7 +322,7 @@ generate_opcode_prefix(int *inout_addrmode, struct mos65xx_operand *operand, str
         addrmode = MOS65XX_ADDRMODE_IMM;
         operand->lhs.X_op = O_constant;
         operand->lhs.X_add_number = 0;
-        operand->lhs.X_md = (MOS65XX_SIZEOF_BYTE | MOS65XX_IMMFLAG);
+        operand->lhs.X_md = MOS65XX_SIZEOF_BYTE;
       } 
     }
     if((MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)

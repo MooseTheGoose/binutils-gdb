@@ -59,8 +59,6 @@ void md_show_usage(FILE *f);
 #define MOS65XX_OPERAND_INVALID 	MOS65XX_ADDRMODE_INVALID
 
 #define MOS65XX_SIZEOF(X_md) 		((X_md) & 0x3)
-#define MOS65XX_IMMFLAG 		4
-#define MOS65XX_IMM(X_md) 		((X_md) & MOS65XX_IMMFLAG)
 #define MOS65XX_RELOC_NONE 		0
 #define MOS65XX_RELOC_DP 		8
 #define MOS65XX_RELOC_BANK 		16
