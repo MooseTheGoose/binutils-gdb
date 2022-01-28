@@ -407,6 +407,8 @@ emit_or_reloc_nonpcrel(char *frag, struct mos65xx_operand operand,
     int X_md = curr_exp->X_md;
     if(width <= 0)
       continue;
+    else if(MOS65XX_SIZEOF(X_md) > 0 && MOS65XX_SIZEOF(X_md) != width)
+      as_fatal("Forcing width of operand led to invalid addressing mode for innstruction");
       
     r_type = BFD_RELOC_NONE;
     
