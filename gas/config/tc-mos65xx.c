@@ -415,6 +415,8 @@ emit_or_reloc_nonpcrel(char *frag, struct mos65xx_operand operand,
     int X_md = curr_exp->X_md;
     if(width <= 0)
       continue;
+    else if(MOS65XX_SIZEOF(X_md) > 0 && MOS65XX_SIZEOF(X_md) != width)
+      as_fatal("Forcing width of operand led to invalid addressing mode for innstruction");
       
     r_type = BFD_RELOC_NONE;
     
@@ -574,49 +576,39 @@ md_apply_fix(fixS * fixP ATTRIBUTE_UNUSED, valueT* valP ATTRIBUTE_UNUSED, segT s
     case BFD_RELOC_8_PCREL:
       if(fixP->fx_done && (val < -0x80 || val >= 0x80))
         as_bad_where(fixP->fx_file, fixP->fx_line, "8-bit signed offset out of range!");
-      *rel++ = val & 0xff;
       break;
     case BFD_RELOC_16_PCREL:
       if(fixP->fx_done && (val < -0x8000 || val >= 0x8000))
         as_bad_where(fixP->fx_file, fixP->fx_line, "16-bit signed offset out of range!");
-      *rel++ = val & 0xff;
-      *rel++ = val >> 8 & 0xff;
       break;
     case BFD_RELOC_8:
       if(fixP->fx_done && (val < -0x80 || val >= 0x100))
         as_warn_where(fixP->fx_file, fixP->fx_line, "8-bit relocation out of range");
-      *rel++ = val & 0xff; 
       break;
     case BFD_RELOC_16:
       if(fixP->fx_done && (val < -0x8000 || val >= 0x1000))
         as_warn_where(fixP->fx_file, fixP->fx_line, "16-bit relocation out of range");
-      *rel++ = val & 0xff;
-      *rel++ = val >> 8 & 0xff;
       break;
     case BFD_RELOC_24:
       if(fixP->fx_done && (val < -0x800000 || val >= 0x1000000))
         as_warn_where(fixP->fx_file, fixP->fx_line, "24-bit relocation out of range");
-      *rel++ = val & 0xff;
-      *rel++ = val >> 8 & 0xff;
-      *rel++ = val >> 16 & 0xff;
       break;
     case BFD_RELOC_8_FFnn:
-      *rel++ = val & 0xff;
       break;
     case BFD_RELOC_MOS65XX_DPAGE:
-      *rel++ = val >> 8 & 0xffff;
+      val >>= 8;
       break;
     case BFD_RELOC_MOS65XX_BANK:
-      *rel++ = val >> 16 & 0xff;
+      val >>= 16;
       break; 
     case BFD_RELOC_MOS65XX_STK_REL:
       if(fixP->fx_done && (val < 0 || val >= 0x100))
         as_warn_where(fixP->fx_file, fixP->fx_line, "Stack-relative offset out of range");
-      *rel++ = val & 0xff;
       break;
     default:
       break;
   }
+  md_number_to_chars(rel, val, fixP->fx_size); 
 }
 
 const char *
