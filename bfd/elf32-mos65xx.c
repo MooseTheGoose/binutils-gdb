@@ -189,6 +189,22 @@ static const struct mos65xx_reloc_map_entry mos65xx_reloc_map[R_MOS65XX_MAX] =
  	0,
  	0xffff,
  	false)
+  },
+  {
+    BFD_RELOC_32,
+    HOWTO(R_MOS65XX_32,
+ 	0,
+ 	2,
+ 	32,
+ 	false,
+ 	0,
+ 	complain_overflow_bitfield,
+ 	bfd_elf_generic_reloc,
+ 	"R_MOS65XX_32",
+ 	false,
+ 	0,
+ 	0xffffffff,
+ 	false)
   }
 };
 

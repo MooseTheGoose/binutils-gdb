@@ -304,10 +304,10 @@ mos65xx_dis_read_arg(struct mos65xx_arg_str *arg, bfd_vma vaddr,
     if(pcrel_width > 0)
     {
       val = (int32_t)(val << (32 - 8 * pcrel_width)) >> (32 - 8 * pcrel_width);
-      val += (vaddr + width);
+      val += (vaddr + pcrel_width);
     }
     int snlen = 0; 
-    val &= (1 << (read_width * 8)) - 1;
+    val &= (1 << (width * 8)) - 1;
     snlen = snprintf(printstr, printsz, "$%X", val);
     if(snlen >= 0 && snlen < printsz)
     {
@@ -394,21 +394,30 @@ print_insn(bfd_vma vaddr, struct disassemble_info *info,
   arg1.width = widths.width1;
   arg1.pcrel_width = pcrel_width;
 
-  if(arg1.width > 0)
+  if(pcrel_width > 0)
   {
     int len1 = mos65xx_dis_read_arg(&arg1, vaddr, info);
-    if(len1 < 0)
-      return -1;
-    len += len1; 
-    vaddr += len1;
+    len += pcrel_width;
+    vaddr += pcrel_width;
   }
-  if(arg2.width > 0)
+  else 
   {
-    int len2 = mos65xx_dis_read_arg(&arg2, vaddr, info);
-    if(len2 < 0)
-      return -1;
-    len += len2;
-    vaddr += len2;
+    if(arg1.width > 0)
+    {
+      int len1 = mos65xx_dis_read_arg(&arg1, vaddr, info);
+      if(len1 < 0)
+        return -1;
+      len += len1; 
+      vaddr += len1;
+    }
+    if(arg2.width > 0)
+    {
+      int len2 = mos65xx_dis_read_arg(&arg2, vaddr, info);
+      if(len2 < 0)
+        return -1;
+      len += len2;
+      vaddr += len2;
+    }
   }
   mos65xx_dis_write(&wrtr, "%s", nmemonic);
   switch(addrmode)

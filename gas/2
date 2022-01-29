@@ -382,7 +382,7 @@ generate_opcode_prefix(int *inout_addrmode, struct mos65xx_operand *operand, str
   | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IND_IDX) \
   | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IND_IDY) \
   | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IND) \
-  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IDX) \
+  | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IDX)     default_width = MOS65XX_SIZEOF(operand.lhs.X_md); \
   | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IND_LNG_IDY) \
   | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IDY)) 
 
@@ -605,7 +605,7 @@ md_atof(int type, char *litP, int *sizeP)
 long
 md_pcrel_from(fixS * fixp)
 {
-  return fixp->fx_where + fixp->fx_frag->fr_address + fixp->fx_size;
+  return fixp->fx_where + fixp->fx_frag->fr_address;
 }
 
 static void
@@ -647,11 +647,6 @@ tc_gen_reloc(asection *seg ATTRIBUTE_UNUSED, fixS *fixp ATTRIBUTE_UNUSED)
   reloc->address = fixp->fx_frag->fr_address + fixp->fx_where;
   reloc->addend = fixp->fx_offset;
   reloc->howto = bfd_reloc_type_lookup(stdoutput, fixp->fx_r_type);
-
-  /* ELF needs to subtract size of relocation in addend for pcrel */
-  if(fixp->fx_pcrel)
-    reloc->addend -= fixp->fx_size;
-
   if(reloc->howto == NULL)
   {
     as_bad_where(fixp->fx_file, fixp->fx_line, 
