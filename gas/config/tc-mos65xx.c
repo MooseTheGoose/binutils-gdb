@@ -549,48 +549,26 @@ md_apply_fix(fixS * fixP ATTRIBUTE_UNUSED, valueT* valP ATTRIBUTE_UNUSED, segT s
   long val = *valP;
   char *rel = fixP->fx_where + fixP->fx_frag->fr_literal;
 
-  if(fixP->fx_addsy == NULL)
-    fixP->fx_done = 1;
-  if(fixP->fx_pcrel)
-  {
-    segT fix_seg = S_GET_SEGMENT(fixP->fx_addsy);
-    if(fix_seg == seg || fix_seg == absolute_section)
-    {
-      val += S_GET_VALUE(fixP->fx_addsy);
-      fixP->fx_done = 1;
-    }
-  }
   switch(fixP->fx_r_type)
   {
     case BFD_RELOC_8_PCREL:
-    case BFD_RELOC_16_PCREL:
-      fixP->fx_no_overflow = 0;
-      break;
-    default:
-      fixP->fx_no_overflow = 1;
-      break;
-  }
-
-  switch(fixP->fx_r_type)
-  {
-    case BFD_RELOC_8_PCREL:
-      if(fixP->fx_done && (val < -0x80 || val >= 0x80))
+      if(val < -0x80 || val >= 0x80)
         as_bad_where(fixP->fx_file, fixP->fx_line, "8-bit signed offset out of range!");
       break;
     case BFD_RELOC_16_PCREL:
-      if(fixP->fx_done && (val < -0x8000 || val >= 0x8000))
+      if(val < -0x8000 || val >= 0x8000)
         as_bad_where(fixP->fx_file, fixP->fx_line, "16-bit signed offset out of range!");
       break;
     case BFD_RELOC_8:
-      if(fixP->fx_done && (val < -0x80 || val >= 0x100))
+      if(val < -0x80 || val >= 0x100)
         as_warn_where(fixP->fx_file, fixP->fx_line, "8-bit relocation out of range");
       break;
     case BFD_RELOC_16:
-      if(fixP->fx_done && (val < -0x8000 || val >= 0x1000))
+      if(val < -0x8000 || val >= 0x1000)
         as_warn_where(fixP->fx_file, fixP->fx_line, "16-bit relocation out of range");
       break;
     case BFD_RELOC_24:
-      if(fixP->fx_done && (val < -0x800000 || val >= 0x1000000))
+      if(val < -0x800000 || val >= 0x1000000)
         as_warn_where(fixP->fx_file, fixP->fx_line, "24-bit relocation out of range");
       break;
     case BFD_RELOC_8_FFnn:
@@ -602,7 +580,7 @@ md_apply_fix(fixS * fixP ATTRIBUTE_UNUSED, valueT* valP ATTRIBUTE_UNUSED, segT s
       val >>= 16;
       break; 
     case BFD_RELOC_MOS65XX_STK_REL:
-      if(fixP->fx_done && (val < 0 || val >= 0x100))
+      if(val < 0 || val >= 0x100)
         as_warn_where(fixP->fx_file, fixP->fx_line, "Stack-relative offset out of range");
       break;
     default:
@@ -623,11 +601,20 @@ md_pcrel_from(fixS * fixp)
   return fixp->fx_where + fixp->fx_frag->fr_address + fixp->fx_size;
 }
 
+static void
+set_emulated(int flag)
+{
+  mos65xx_ctx.cpu_flags 
+    = ((mos65xx_ctx.cpu_flags) & ~MOS65XX_CPU_FLAG_EMULATION) | flag;
+}
+
 const pseudo_typeS md_pseudo_table[] =
 {
   { "int", cons, 3 },
   { "long", cons, 3 },
   { "int32", cons, 4 },
+  { "emulated", set_emulated, MOS65XX_CPU_FLAG_EMULATION },
+  { "native", set_emulated, 0 },
   { NULL, 0, 0 }
 };
 
