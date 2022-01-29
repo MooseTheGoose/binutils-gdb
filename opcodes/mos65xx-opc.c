@@ -117,7 +117,7 @@ static uint32_t mos65xx_opclass_modeflags[MOS65XX_OPCLASS_MAX] =
   MOS65XX_PEA_MODEFLAGS,
   MOS65XX_PEI_MODEFLAGS,
   MOS65XX_PER_MODEFLAGS,
-  MOS65XX_IMM_MODEFLAGS,
+  MOS65XX_IMM8_MODEFLAGS,
   MOS65XX_STA_MODEFLAGS,
   MOS65XX_STX_MODEFLAGS,
   MOS65XX_STY_MODEFLAGS,
@@ -188,7 +188,7 @@ struct mos65xx_op
 }
 
 void
-mos65xx_addrmode_widths(int addrmode, struct mos65xx_arg_widths *widths)
+mos65xx_addrmode_widths(int addrmode, struct mos65xx_arg_widths *widths,  int cpu_flags)
 {
   int width1 = 0;
   int width2 = 0;
@@ -206,6 +206,8 @@ mos65xx_addrmode_widths(int addrmode, struct mos65xx_arg_widths *widths)
   else if(modeflag & MOS65XX_WIDTHFLAGS_LONG)
     width1 = MOS65XX_SIZEOF_LONG;
 
+  if((cpu_flags & MOS65XX_CPU_FLAG_EMULATION) == 0 && addrmode == MOS65XX_ADDRMODE_IMM)
+    width1 = MOS65XX_SIZEOF_WORD;
   widths->width1 = width1;
   widths->width2 = width2;
 }

@@ -15,6 +15,14 @@ const char line_separator_chars[] = "\0";
 
 const char * md_shortopts = "\0";
 
+static struct 
+{
+  int cpu_flags;
+} mos65xx_ctx =
+{
+  .cpu_flags = MOS65XX_CPU_FLAG_EMULATION
+};
+
 struct option md_longopts[] = 
 {
   {NULL, false, NULL, 0}
@@ -27,9 +35,8 @@ md_parse_option(int optc ATTRIBUTE_UNUSED, const char* arg ATTRIBUTE_UNUSED)
   return 0;
 }
 
-void md_show_usage(FILE *f)
+void md_show_usage(FILE *f ATTRIBUTE_UNUSED)
 {
-  fprintf(f, "HELLO WORLD\n");
 }
 
 void
@@ -280,7 +287,8 @@ coerce_operand_to_addrmode(int operand, uint32_t modeflags, int szof)
     { MOS65XX_OPERAND_IND, MOS65XX_ADDRMODE_IND, MOS65XX_ADDRMODE_ABS_IND, MOS65XX_ADDRMODE_INVALID },
     { MOS65XX_OPERAND_IDX, MOS65XX_ADDRMODE_IDX, MOS65XX_ADDRMODE_ABS_IDX, MOS65XX_ADDRMODE_ABS_LNG_IDX },
     { MOS65XX_OPERAND_IDY, MOS65XX_ADDRMODE_IDY, MOS65XX_ADDRMODE_ABS_IDY, MOS65XX_ADDRMODE_INVALID },
-    { MOS65XX_OPERAND_IND_LNG, MOS65XX_ADDRMODE_IND_LNG, MOS65XX_ADDRMODE_ABS_IND_LNG, MOS65XX_ADDRMODE_INVALID }
+    { MOS65XX_OPERAND_IND_LNG, MOS65XX_ADDRMODE_IND_LNG, MOS65XX_ADDRMODE_ABS_IND_LNG, MOS65XX_ADDRMODE_INVALID },
+    { MOS65XX_OPERAND_IMM, MOS65XX_ADDRMODE_IMM8, MOS65XX_ADDRMODE_IMM, MOS65XX_ADDRMODE_INVALID }
   };
 
   if(szof != 0 && szof != MOS65XX_SIZEOF_BYTE  && szof != MOS65XX_SIZEOF_WORD && szof != MOS65XX_SIZEOF_LONG)
@@ -478,7 +486,7 @@ emit_insn(int addrmode, uint8_t opcode_prefix, struct mos65xx_op opcode, struct 
 {
   char *frag;
   struct mos65xx_arg_widths widths;
-  mos65xx_addrmode_widths(addrmode, &widths);
+  mos65xx_addrmode_widths(addrmode, &widths, mos65xx_ctx.cpu_flags);
   frag = frag_more(1 + widths.width1 + widths.width2);
   *frag++ = opcode_prefix;
 
@@ -625,6 +633,9 @@ md_pcrel_from(fixS * fixp)
 
 const pseudo_typeS md_pseudo_table[] =
 {
+  { "int", cons, 3 },
+  { "long", cons, 3 },
+  { "int32", cons, 4 },
   { NULL, 0, 0 }
 };
 

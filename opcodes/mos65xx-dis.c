@@ -8,9 +8,9 @@
 static struct mos65816_disas
 default_disas[256] =
 {
-  MOS65816_DIS("BRK", IMM),
+  MOS65816_DIS("BRK", IMM8),
   MOS65816_DIS("ORA", IND_IDX),
-  MOS65816_DIS("COP", IMM),
+  MOS65816_DIS("COP", IMM8),
   MOS65816_DIS("ORA", STK_REL),
   MOS65816_DIS("TSB", PGE),
   MOS65816_DIS("ORA", PGE),
@@ -202,7 +202,7 @@ default_disas[256] =
   MOS65816_DIS("LDA", ABS_LNG_IDX),
   MOS65816_DIS("CPY", IMM),
   MOS65816_DIS("CMP", IND_IDX),
-  MOS65816_DIS("REP", IMM),
+  MOS65816_DIS("REP", IMM8),
   MOS65816_DIS("CMP", STK_REL),
   MOS65816_DIS("CPY", PGE),
   MOS65816_DIS("CMP", PGE),
@@ -234,7 +234,7 @@ default_disas[256] =
   MOS65816_DIS("CMP", ABS_LNG_IDX),
   MOS65816_DIS("CPX", IMM),
   MOS65816_DIS("SBC", IND_IDX),
-  MOS65816_DIS("SEP", IMM),
+  MOS65816_DIS("SEP", IMM8),
   MOS65816_DIS("SBC", STK_REL),
   MOS65816_DIS("CPX", PGE),
   MOS65816_DIS("SBC", PGE),
@@ -365,11 +365,12 @@ print_insn(bfd_vma vaddr, struct disassemble_info *info,
   const char *nmemonic = op_disas->nmemonic;
   int pcrel_width = op_disas->pcrel_szof;
   struct mos65xx_dis_writer wrtr = MOS65XX_DIS_WRITER_NEW;
+  int cpu_flags = MOS65XX_CPU_FLAG_EMULATION;
 
   struct mos65xx_arg_widths widths;
   struct mos65xx_arg_str arg1, arg2;
 
-  mos65xx_addrmode_widths(addrmode, &widths);
+  mos65xx_addrmode_widths(addrmode, &widths, cpu_flags);
   arg2.width = widths.width2;
   arg2.pcrel_width = 0;
   arg1.width = widths.width1;
@@ -414,6 +415,7 @@ print_insn(bfd_vma vaddr, struct disassemble_info *info,
       mos65xx_dis_write(&wrtr, " [%s],Y", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_IMM:
+    case MOS65XX_ADDRMODE_IMM8:
       mos65xx_dis_write(&wrtr, " #%s", arg1.arg);
       break;
     case MOS65XX_ADDRMODE_IND_IDY:
