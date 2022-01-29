@@ -287,14 +287,6 @@ mos65xx_dis_read_val(bfd_vma vaddr, struct disassemble_info *info, int n, uint32
   return n;
 }
 
-/*
-static int
-mos65xx_implied_lookup_compar(struct mos65xx_implied_lookup *lhs, struct mos65xx_implied_lookup *rhs)
-{
-  return (int)lhs->opcode - (int)rhs->opcode;
-}
-*/
-
 static int
 mos65xx_dis_read_arg(struct mos65xx_arg_str *arg, bfd_vma vaddr,
 			struct disassemble_info *info)
@@ -356,6 +348,31 @@ mos65xx_dis_write_final(struct mos65xx_dis_writer *wrtr)
   printf("%s", space_buffer); 
 }
 
+struct mos65xx_dis_ctx
+{
+  int cpu_flags;
+};
+static struct mos65xx_dis_ctx
+derive_ctx_from_args(const char *cmdline)
+{
+  struct mos65xx_dis_ctx dis_ctx = 
+  {
+    .cpu_flags = MOS65XX_CPU_FLAG_EMULATION
+  };
+  const char *p;
+  for(p = cmdline; p != NULL;)
+  {
+    if(strncmp(p, "native", strlen("native")) == 0)
+    {
+      dis_ctx.cpu_flags &= ~MOS65XX_CPU_FLAG_EMULATION;
+      p += strlen("native");
+    }
+    p = strchr(p, ',');
+    if(p) p++;
+  }
+  return dis_ctx;
+}
+
 static int 
 print_insn(bfd_vma vaddr, struct disassemble_info *info, 
 		struct mos65816_disas *op_disas)
@@ -365,7 +382,8 @@ print_insn(bfd_vma vaddr, struct disassemble_info *info,
   const char *nmemonic = op_disas->nmemonic;
   int pcrel_width = op_disas->pcrel_szof;
   struct mos65xx_dis_writer wrtr = MOS65XX_DIS_WRITER_NEW;
-  int cpu_flags = MOS65XX_CPU_FLAG_EMULATION;
+  struct mos65xx_dis_ctx dis_ctx = derive_ctx_from_args(info->disassembler_options);
+  int cpu_flags = dis_ctx.cpu_flags;
 
   struct mos65xx_arg_widths widths;
   struct mos65xx_arg_str arg1, arg2;
