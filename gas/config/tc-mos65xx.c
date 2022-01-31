@@ -325,12 +325,12 @@ generate_opcode_prefix(int *inout_addrmode, struct mos65xx_operand *operand, str
     {
       if(MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_ACC) & opcode.modeflags)
         addrmode = MOS65XX_ADDRMODE_ACC;
-      else if(MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IMM) & opcode.modeflags)
+      else if((MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IMM) | MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IMM8)) & opcode.modeflags)
       {
-        addrmode = MOS65XX_ADDRMODE_IMM;
+        addrmode = (opcode.modeflags & MOS65XX_MODEFLAG(MOS65XX_ADDRMODE_IMM8)) ? MOS65XX_ADDRMODE_IMM8 : MOS65XX_ADDRMODE_IMM;
         operand->lhs.X_op = O_constant;
         operand->lhs.X_add_number = 0;
-        operand->lhs.X_md = MOS65XX_SIZEOF_BYTE;
+        operand->lhs.X_md = 0;
       } 
     }
     if((MOS65XX_MODEFLAG(addrmode) & opcode.modeflags) == 0)
